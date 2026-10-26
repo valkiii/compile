@@ -1,0 +1,58 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Stronger protocol colours so cards are told apart at a glance: tinted body, coloured
+ * protocol header, bright border. Face-down backs stay neutral (they must not leak anything).
+ */
+
+/* Protocols whose defined colour is too dark to see on the dark board get a brighter accent */
+.card-protocol-darkness { --card-accent: #8b4dff; }
+.card-protocol-death { --card-accent: #e04848; }
+.card-protocol-anarchy { --card-accent: #ff5a36; }
+.card-protocol-war { --card-accent: #d94a3a; }
+.card-protocol-fear { --card-accent: #d6406e; }
+.card-protocol-corruption { --card-accent: #9b5cff; }
+.card-protocol-assimilation { --card-accent: #c94fd1; }
+.card-protocol-smoke { --card-accent: #a3a3a3; }
+.card-protocol-time { --card-accent: #d9894a; }
+.card-protocol-apathy { --card-accent: #b8b8c8; }
+
+.card-component.has-custom-color .card-front {
+    --accent: var(--card-accent, var(--card-custom-color));
+    background-color: color-mix(in srgb, var(--accent) 24%, #120a2b) !important;
+    border: 2px solid var(--accent) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 18px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.card-component.has-custom-color .card-front .card-protocol {
+    background: color-mix(in srgb, var(--accent) 72%, #0a051a);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.card-component.has-custom-color .card-front .card-value {
+    background: rgba(10, 5, 26, 0.85);
+    color: color-mix(in srgb, var(--accent) 60%, #fff);
+    border-left-color: var(--accent);
+}
+
+/* Command boxes stay dark for readability; empty ones let the tint through */
+.card-component.has-custom-color .card-rule-box:not(:empty) {
+    background-color: rgba(10, 5, 26, 0.72);
+}
+
+.card-component.has-custom-color .card-rule-box:empty {
+    background-color: rgba(10, 5, 26, 0.25);
+}
+
+.card-component.has-custom-color .card-rule-box::before,
+.card-component.has-custom-color .card-rule-box::after {
+    border-color: var(--accent);
+}
+
+/* Selection / hover glow keeps its meaning (cyan = selected) */
+.card-component.has-custom-color.selected .card-front,
+.card-component.has-custom-color.in-hand:hover .card-front {
+    border-color: var(--primary-color) !important;
+}

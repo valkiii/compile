@@ -6,6 +6,7 @@
 import React from "react";
 import { PlayedCard } from "../types";
 import { cardArtUrl } from "../data/cardArt";
+import { protocolColor } from "../utils/protocolColors";
 
 interface CardProps {
   card: PlayedCard;
@@ -76,7 +77,9 @@ export const CardComponent: React.FC<CardProps> = ({
   if (card.protocol) {
     classNames.push(`card-protocol-${card.protocol.toLowerCase()}`);
   }
-  if (card.color) {
+  // Cards dealt into a game don't carry their protocol colour: look it up by name
+  const color = card.color || protocolColor(card.protocol);
+  if (color) {
     classNames.push("has-custom-color");
   }
   if (card.pattern) {
@@ -90,9 +93,9 @@ export const CardComponent: React.FC<CardProps> = ({
 
   // Create inline styles for custom protocol colors
   const customStyle: React.CSSProperties = { ...style };
-  if (card.color) {
+  if (color) {
     // Set CSS variable without quotes for proper color parsing
-    (customStyle as any)["--card-custom-color"] = card.color;
+    (customStyle as any)["--card-custom-color"] = color;
   }
 
   const artUrl = cardArtUrl(card.protocol, card.value);

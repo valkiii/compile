@@ -155,7 +155,7 @@
 }
 
 .card-detail-panel {
-    --accent: var(--card-custom-color, var(--primary-color));
+    --accent: var(--card-accent, var(--card-custom-color, var(--primary-color)));
     position: relative;
     background: var(--surface-color);
     border: 1px solid var(--accent);
@@ -268,7 +268,7 @@
 }
 
 .protocol-text-list {
-    --accent: var(--card-custom-color, var(--primary-color));
+    --accent: var(--card-accent, var(--card-custom-color, var(--primary-color)));
     border: 1px solid var(--surface-hover);
     border-left: 4px solid var(--accent);
     border-radius: 10px;

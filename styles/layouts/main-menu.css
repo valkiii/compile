@@ -261,3 +261,14 @@
     transform: translateX(-50%);
   }
 }
+
+/* The menu can be taller than the window (e.g. laptops): scroll instead of cutting it off */
+.screen.main-menu {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.main-menu > * {
+  flex-shrink: 0;
+}
