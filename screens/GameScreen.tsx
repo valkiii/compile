@@ -45,8 +45,10 @@ import { OnlineGameSetup, isOnlineMessage } from '../multiplayer/messages';
 import { useGuestGame } from '../multiplayer/useGuestGame';
 import { OnlineStatusBar } from '../components/OnlineStatusBar';
 import type { CoinToss } from './ProtocolSelection';
-import { playSound, soundForAnimation, unlockAudio } from '../utils/sound';
+import { playSound, soundForAnimation } from '../utils/sound';
 import { SoundToggle } from '../components/SoundToggle';
+import { EffectsOverlay } from '../components/EffectsOverlay';
+import { ZoomControls, loadZoom, saveZoom, useZoomGestures } from '../components/ZoomControls';
 import '../styles/layouts/tutorial.css';
 
 const SOLO_DECK_OUT_REASON = 'Your deck ran dry. In a Solo Deck Run your trash is never reshuffled.';
@@ -137,6 +139,13 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
   const isCompact = useIsCompact();
   const isPhoneLandscape = useIsPhoneLandscape();
   const [showHelp, setShowHelp] = useState(false);
+  // Board zoom (buttons, pinch, Ctrl/⌘ + wheel), remembered on this device
+  const [zoom, setZoomState] = useState(loadZoom);
+  const setZoom = useCallback((z: number) => {
+    setZoomState(z);
+    saveZoom(z);
+  }, []);
+  useZoomGestures(zoom, setZoom);
   // Animation queue context for the new animation system
   const { isAnimating, currentAnimation, enqueueAnimation, enqueueAnimations, getIsAnimatingSync, getAnimationSync } = useAnimationQueue();
   // Determine starting player via coin flip on first mount
@@ -574,16 +583,22 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
 
   // Sound effects follow the animation queue (so an online guest hears the host's moves too)
   useEffect(() => {
-    const sound = currentAnimation ? soundForAnimation(currentAnimation.type) : null;
-    if (sound) playSound(sound);
+    if (!currentAnimation) return;
+    // Compiles are a chain of delete animations: thunder on the first, quiet after
+    if (currentAnimation.compile === 'start') {
+      playSound('compile');
+      return;
+    }
+    if (currentAnimation.compile === 'continue') return;
+    const sound = soundForAnimation(currentAnimation.type);
+    if (!sound) return;
+    // A played card thumps when it lands on the mat, not when it starts flying
+    if (sound === 'place') {
+      const t = setTimeout(() => playSound('place'), Math.max(0, (currentAnimation.duration ?? 400) - 60));
+      return () => clearTimeout(t);
+    }
+    playSound(sound);
   }, [currentAnimation?.id]);
-
-  // iOS only plays audio after a user gesture
-  useEffect(() => {
-    const unlock = () => unlockAudio();
-    window.addEventListener('pointerdown', unlock);
-    return () => window.removeEventListener('pointerdown', unlock);
-  }, []);
 
   // NEW TOAST SYSTEM: Synchronized with animations
   // Effect 1: Show toast when animation with logMessage starts
@@ -1040,7 +1055,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
   const displayedTurn = isAnimating ? visualGameState.turn : (gameState.actionRequired?.actor || visualGameState.turn);
 
   return (
-    <div className={`screen game-screen ${isCompact ? 'compact' : ''}`}>
+    <div className={`screen game-screen ${isCompact ? 'compact' : ''}`} style={{ '--zoom': zoom } as React.CSSProperties}>
         {debugModalPlayer && (
             <DebugModal
                 player={debugModalPlayer}
@@ -1182,6 +1197,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 <div className="preview-card-area">
                     {renderPreview()}
                 </div>
+                <ZoomControls zoom={zoom} setZoom={setZoom} variant="sidebar" />
                 <SoundToggle className="btn btn-back" withLabel />
                 <button className="btn btn-back" onClick={() => setShowHelp(true)}>
                     How to play
@@ -1206,6 +1222,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                     onPileClick={(owner) => setDebugModalPlayer(owner)}
                   />
                 )}
+                {isCompact && <ZoomControls zoom={zoom} setZoom={setZoom} variant="floating" />}
                 {isCompact && hoveredCard && (
                   <CardDetailSheet
                     card={hoveredCard.card}
@@ -1343,6 +1360,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
 
         {/* Animation Overlay - renders above game during animation queue playback */}
         <AnimationOverlay />
+        <EffectsOverlay />
     </div>
   );
 }

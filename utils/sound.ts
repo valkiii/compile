@@ -6,7 +6,7 @@
  * iOS only allows audio after a user gesture, so the context is unlocked on the first tap.
  */
 
-export type SoundName = 'draw' | 'place' | 'discard' | 'delete' | 'flip' | 'shift' | 'compile';
+export type SoundName = 'draw' | 'place' | 'discard' | 'delete' | 'flip' | 'shift' | 'compile' | 'message';
 
 const MUTE_KEY = 'compile_sound_muted';
 let ctx: AudioContext | null = null;
@@ -54,6 +54,14 @@ function audio(): AudioContext | null {
 
 /** Call from a user gesture (first tap) so iOS lets us play later. */
 export function unlockAudio() {
+    // iPhones mute web audio when the ring/silent switch is on; game sounds should play
+    // anyway (the in-game mute button still silences them)
+    try {
+        const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+        if (session && session.type !== 'playback') session.type = 'playback';
+    } catch {
+        // not supported: fine
+    }
     const c = audio();
     if (c && c.state === 'suspended') void c.resume();
 }
@@ -125,11 +133,18 @@ export function playSound(name: SoundName) {
             noise(c, 'lowpass', 2500, 250, now, 0.32, 0.3);
             tone(c, 'triangle', 200, 60, now, 0.35, 0.25);
             break;
-        case 'compile': { // rising chime
-            [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(c, 'sine', f, f, now + i * 0.09, 0.28, 0.35));
-            tone(c, 'triangle', 1046.5, 2093, now + 0.36, 0.12, 0.5);
+        case 'compile': { // thunder crack + rumble, then a rising chime
+            noise(c, 'highpass', 6000, 1500, now, 0.55, 0.12);
+            noise(c, 'lowpass', 900, 80, now + 0.04, 0.6, 0.9);
+            tone(c, 'sawtooth', 70, 35, now + 0.02, 0.25, 0.7);
+            [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(c, 'sine', f, f, now + 0.35 + i * 0.09, 0.24, 0.35));
+            tone(c, 'triangle', 1046.5, 2093, now + 0.71, 0.1, 0.5);
             break;
         }
+        case 'message': // two-note ping
+            tone(c, 'sine', 880, 880, now, 0.3, 0.18);
+            tone(c, 'sine', 1318.5, 1318.5, now + 0.11, 0.28, 0.28);
+            break;
     }
 }
 

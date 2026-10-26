@@ -620,7 +620,8 @@
         background: var(--surface-color);
     }
 
-    .protocol-grid-container > .btn:not(:disabled) {
+    .protocol-grid-container > .btn:not(:disabled),
+    .draft-actions .btn:not(.btn-random):not(:disabled) {
         background: var(--primary-color);
         color: var(--background-color);
     }
@@ -714,8 +715,9 @@
 
     .screen.game-screen.compact {
         /* Cards scale with the available height (Safari toolbars vs. home-screen app) */
-        --card-h: clamp(96px, calc((100dvh - 330px) / 3.7), 132px);
-        --card-w: calc(var(--card-h) / 1.4);
+        /* --zoom (board zoom control) scales cards; never wider than a lane */
+        --card-w: min(calc(clamp(96px, calc((100dvh - 330px) / 3.7), 132px) * var(--zoom, 1) / 1.4), calc((100vw - 30px) / 3));
+        --card-h: calc(var(--card-w) * 1.4);
         height: 100dvh;
         padding: env(safe-area-inset-top, 0px) 8px env(safe-area-inset-bottom, 0px);
         gap: 0;
@@ -1059,7 +1061,8 @@
 /* Narrow phones (SE / mini): cards limited by lane width */
 @media (max-width: 380px) {
     .screen.game-screen.compact {
-        --card-h: clamp(90px, calc((100dvh - 330px) / 3.7), 112px);
+        --card-w: min(calc(clamp(90px, calc((100dvh - 330px) / 3.7), 112px) * var(--zoom, 1) / 1.4), calc((100vw - 30px) / 3));
+        --card-h: calc(var(--card-w) * 1.4);
     }
 
     .hud-opponent-name {

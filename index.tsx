@@ -9,6 +9,7 @@ import { App } from "./App";
 import "./styles/card-art.css";
 import "./styles/card-colors.css";
 import "./styles/card-motifs.css";
+import "./styles/effects.css";
 import "./styles/layouts/game-desktop.css";
 import "./styles/responsive/phone.css";
 

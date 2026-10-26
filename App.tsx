@@ -17,6 +17,7 @@ import { OnlineLobby } from './screens/OnlineLobby';
 import { OnlineDraft } from './screens/OnlineDraft';
 import { RelayClient, Role, loadSavedSession, setOwnerKey, relayHttpBase } from './multiplayer/relayClient';
 import { setCardArtSource } from './data/cardArt';
+import { unlockAudio } from './utils/sound';
 import { takeFragmentParams } from './multiplayer/invite';
 import { OnlineGameSetup, isOnlineMessage } from './multiplayer/messages';
 import { clearHostGame, loadHostGame, saveHostGame } from './multiplayer/savedGame';
@@ -71,6 +72,13 @@ export function App() {
     // Invite links open the lobby straight away
     if (fragment.invite) setScreen('OnlineLobby');
   }, [fragment]);
+
+  // iOS only plays audio after a user gesture: unlock on every tap (cheap, idempotent)
+  useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener('pointerdown', unlock);
+    return () => window.removeEventListener('pointerdown', unlock);
+  }, []);
 
   // Load default custom protocols on app start (Anarchy_custom for testing)
   useEffect(() => {

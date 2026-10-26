@@ -8,7 +8,7 @@
  */
 
 .screen.game-screen:not(.compact) {
-    --desk-card-h: clamp(84px, calc((100vh - 330px) / 3.3), 140px);
+    --desk-card-h: calc(clamp(84px, calc((100vh - 330px) / 3.3), 140px) * var(--zoom, 1));
     --desk-card-w: calc(var(--desk-card-h) / 1.4);
     height: 100vh;
     overflow: hidden;

@@ -632,6 +632,8 @@ export function createCompileDeleteAnimations(
                 startDelay: index === 0 ? BATCH_ANIMATION_INITIAL_DELAY : 0,
             },
             laneIndex: item.laneIndex,
+            // Marks the compile (sound + lightning effect on the first card)
+            compile: index === 0 ? 'start' : 'continue',
         };
     });
 }
@@ -907,6 +909,8 @@ export function createBatchDeleteAnimations(
                 startDelay: index === 0 ? BATCH_ANIMATION_INITIAL_DELAY : 0,
             },
             laneIndex: item.laneIndex,
+            // Marks the compile (sound + lightning effect on the first card)
+            compile: index === 0 ? 'start' : 'continue',
         };
     });
 }

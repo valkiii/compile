@@ -137,6 +137,15 @@ export function OnlineDraft({ client, role, useControl, onStart, onLeave }: Onli
         });
     };
 
+    const randomPick = () => {
+        if (!myTurn || !step) return;
+        const pool = visible.filter(p => !taken.has(p));
+        const picks: string[] = [];
+        while (picks.length < step.picks && pool.length > 0) picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+        setSelection(picks);
+        setPreview(picks[picks.length - 1] ?? null);
+    };
+
     const confirm = () => {
         if (!myTurn || selection.length !== step.picks) return;
         if (isHost) applyPick('host', selection);
@@ -218,7 +227,10 @@ export function OnlineDraft({ client, role, useControl, onStart, onLeave }: Onli
                     </div>
                 </div>
                 {myTurn && (
-                    <button className="btn" onClick={confirm} disabled={selection.length !== step.picks}>Confirm Selection</button>
+                    <div className="draft-actions">
+                        <button className="btn btn-random" onClick={randomPick} title="Pick at random (tap again to reroll)">🎲 Random</button>
+                        <button className="btn" onClick={confirm} disabled={selection.length !== step.picks}>Confirm Selection</button>
+                    </div>
                 )}
             </div>
 

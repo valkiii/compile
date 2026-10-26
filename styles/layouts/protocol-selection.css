@@ -627,3 +627,22 @@
   max-height: none !important;
   overflow: visible !important;
 }
+
+/* Random + Confirm side by side */
+.draft-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.draft-actions .btn-random {
+  flex: 0 0 auto;
+  border-style: dashed;
+}
+
+@media (max-width: 640px) {
+  .draft-actions .btn:not(.btn-random) {
+    flex: 1;
+  }
+}

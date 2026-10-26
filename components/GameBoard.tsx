@@ -13,6 +13,12 @@ import { isCardTargetable } from '../utils/targeting';
 import { hasRequireNonMatchingProtocolRule, hasAnyProtocolPlayRule, canShiftCard, hasPlayOnOpponentSideRule, canPlayFaceUpDueToSameProtocolRule } from '../logic/game/passiveRuleChecker';
 import { getEffectiveCardValue } from '../logic/game/stateManager';
 import { useAnimationQueue } from '../contexts/AnimationQueueContext';
+import { protocolStyle } from '../utils/protocolStyle';
+
+const protocolVars = (protocol: string): React.CSSProperties | undefined => {
+    const identity = protocolStyle(protocol);
+    return identity ? ({ '--card-accent': identity.accent } as React.CSSProperties) : undefined;
+};
 
 interface GameBoardProps {
     gameState: GameState;
@@ -411,9 +417,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false
         }
     }
 
-    const getProtocolClass = (baseClass: string, isCompiled: boolean, laneIndex: number) => {
+    const getProtocolClass = (baseClass: string, isCompiled: boolean, laneIndex: number, protocol?: string) => {
         let classes = [baseClass];
         if (isCompiled) classes.push('compiled');
+        const identity = protocol ? protocolStyle(protocol) : null;
+        if (identity) classes.push('has-identity', `motif-${identity.motif}`);
         if (currentAnimation?.type === 'delete' && currentAnimation.laneIndex === laneIndex) {
             classes.push('is-compiling');
         }
@@ -529,16 +537,18 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false
                 )}
                 <div className={`protocol-bar opponent-bar ${turn === 'opponent' ? 'active-turn' : ''}`}>
                     {opponent.protocols.map((p, i) =>
-                        <div key={`opp-proto-${p}-${i}`} className={getProtocolClass('protocol-display', opponent.compiled[i], i)}>
-                            <span className="protocol-name">{p}</span>
+                        <div key={`opp-proto-${p}-${i}`} className={getProtocolClass('protocol-display', opponent.compiled[i], i, p)} style={protocolVars(p)}>
+                            <span className="protocol-name"><span className="protocol-glyph">{protocolStyle(p)?.glyph}</span>{p}</span>
+                            {opponent.compiled[i] && <span className="protocol-compiled-badge">✓<span className="badge-text"> Compiled</span></span>}
                             <span className="protocol-value">{opponent.laneValues[i]}</span>
                         </div>
                     )}
                 </div>
                 <div className={`protocol-bar player-bar ${turn === 'player' ? 'active-turn' : ''}`}>
                     {player.protocols.map((p, i) =>
-                        <div key={`player-proto-${p}-${i}`} className={getProtocolClass('protocol-display', player.compiled[i], i)}>
-                            <span className="protocol-name">{p}</span>
+                        <div key={`player-proto-${p}-${i}`} className={getProtocolClass('protocol-display', player.compiled[i], i, p)} style={protocolVars(p)}>
+                            <span className="protocol-name"><span className="protocol-glyph">{protocolStyle(p)?.glyph}</span>{p}</span>
+                            {player.compiled[i] && <span className="protocol-compiled-badge">✓<span className="badge-text"> Compiled</span></span>}
                             <span className="protocol-value">{player.laneValues[i]}</span>
                         </div>
                     )}

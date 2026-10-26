@@ -11,6 +11,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { RelayClient } from '../multiplayer/relayClient';
 import { isOnlineMessage } from '../multiplayer/messages';
+import { playSound } from '../utils/sound';
 import '../styles/layouts/chat.css';
 
 interface ChatMessage {
@@ -69,6 +70,7 @@ export const OnlineChat: React.FC<OnlineChatProps> = ({ client, room, inGame }) 
         const { id, text, at } = event.data;
         const message: ChatMessage = { id, text: String(text).slice(0, MAX_LENGTH), at, mine: false };
         setMessages(prev => (prev.some(m => m.id === id) ? prev : [...prev, message]));
+        playSound('message');
         if (!openRef.current) {
             setUnread(n => n + 1);
             setPreview(message);

@@ -159,6 +159,7 @@ export interface AnimationQueueItem {
         target: Player;
     };
     phaseTransitionData?: PhaseTransitionData;  // For phaseTransition: phase sequence to animate
+    compile?: 'start' | 'continue';             // Delete animations that are part of a compile
 }
 
 // =============================================================================

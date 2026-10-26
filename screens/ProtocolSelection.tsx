@@ -230,6 +230,19 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
     });
   };
 
+  // Random pick for the current step (from the shown categories, not yet taken); reroll by tapping again
+  const randomPick = () => {
+    if (!isPlayerTurn || isAnimating || !currentStepInfo) return;
+    const pool = filteredProtocols.filter(p => !chosenProtocols.has(p));
+    const picks: string[] = [];
+    while (picks.length < currentStepInfo.picks && pool.length > 0) {
+      picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    }
+    setCurrentSelection(picks);
+    const first = cards.filter(c => c.protocol === picks[picks.length - 1]).sort((a, b) => a.value - b.value)[0];
+    if (first) setPreviewCard(first);
+  };
+
   const confirmSelection = async () => {
     if (!isPlayerTurn || isAnimating || currentSelection.length !== currentStepInfo.picks) return;
 
@@ -435,6 +448,10 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
             </div>
           </div>
           {isPlayerTurn && (
+            <div className="draft-actions">
+              <button className="btn btn-random" onClick={randomPick} disabled={isAnimating} title="Pick at random (tap again to reroll)">
+                🎲 Random
+              </button>
               <button
                 className="btn"
                 onClick={confirmSelection}
@@ -442,6 +459,7 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
               >
                 Confirm Selection
               </button>
+            </div>
           )}
         </div>
 

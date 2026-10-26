@@ -102,3 +102,107 @@
 .card-front.has-art .card-glyph-mark {
     display: none;
 }
+
+/* --- Protocol bar: same colour/motif/symbol as the protocol's cards --- */
+.game-board .protocol-display.has-identity {
+    --accent: var(--card-accent);
+    --motif: color-mix(in srgb, var(--accent) 22%, transparent);
+    position: relative;
+    isolation: isolate;
+    border-radius: 6px;
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.game-board .protocol-display.has-identity::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0.8;
+}
+
+.game-board .protocol-display.has-identity.motif-diag::before    { background: repeating-linear-gradient(45deg, var(--motif) 0 3px, transparent 3px 11px); }
+.game-board .protocol-display.has-identity.motif-rdiag::before   { background: repeating-linear-gradient(-45deg, var(--motif) 0 3px, transparent 3px 11px); }
+.game-board .protocol-display.has-identity.motif-vlines::before  { background: repeating-linear-gradient(90deg, var(--motif) 0 2px, transparent 2px 8px); }
+.game-board .protocol-display.has-identity.motif-hlines::before  { background: repeating-linear-gradient(0deg, var(--motif) 0 2px, transparent 2px 6px); }
+.game-board .protocol-display.has-identity.motif-grid::before    { background: linear-gradient(var(--motif) 1px, transparent 1px) 0 0 / 9px 9px, linear-gradient(90deg, var(--motif) 1px, transparent 1px) 0 0 / 9px 9px; }
+.game-board .protocol-display.has-identity.motif-dots::before,
+.game-board .protocol-display.has-identity.motif-rainbow::before { background: radial-gradient(var(--motif) 1.6px, transparent 2px) 0 0 / 8px 8px; }
+.game-board .protocol-display.has-identity.motif-bubbles::before { background: radial-gradient(circle, transparent 2.5px, var(--motif) 3px 4px, transparent 4.5px) 0 0 / 12px 12px; }
+.game-board .protocol-display.has-identity.motif-checker::before { background: conic-gradient(var(--motif) 25%, transparent 0 50%, var(--motif) 0 75%, transparent 0) 0 0 / 10px 10px; }
+.game-board .protocol-display.has-identity.motif-rings::before   { background: repeating-radial-gradient(circle at 90% 50%, var(--motif) 0 2px, transparent 2px 8px); }
+.game-board .protocol-display.has-identity.motif-chevron::before,
+.game-board .protocol-display.has-identity.motif-zigzag::before  { background: linear-gradient(135deg, var(--motif) 25%, transparent 25%) -5px 0 / 10px 10px, linear-gradient(225deg, var(--motif) 25%, transparent 25%) -5px 0 / 10px 10px; }
+.game-board .protocol-display.has-identity.motif-waves::before   { background: radial-gradient(circle at 50% 100%, transparent 4px, var(--motif) 4.5px 6px, transparent 6.5px) 0 0 / 12px 7px; }
+.game-board .protocol-display.has-identity.motif-cross::before   { background: repeating-linear-gradient(45deg, var(--motif) 0 1.5px, transparent 1.5px 7px), repeating-linear-gradient(-45deg, var(--motif) 0 1.5px, transparent 1.5px 7px); }
+.game-board .protocol-display.has-identity.motif-rays::before    { background: repeating-conic-gradient(from 0deg at 50% 140%, var(--motif) 0 5deg, transparent 5deg 15deg); }
+
+.game-board .protocol-display.has-identity .protocol-name {
+    color: var(--accent) !important;
+}
+
+.protocol-glyph {
+    margin-right: 0.35em;
+    font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Noto Sans Symbols 2', sans-serif;
+}
+
+.protocol-compiled-badge {
+    display: none;
+}
+
+/* Compiled: impossible to miss: solid protocol colour, glow and a stamp */
+.game-board .protocol-display.has-identity.compiled {
+    background: color-mix(in srgb, var(--accent) 78%, #0a051a) !important;
+    box-shadow: 0 0 14px var(--accent), inset 0 0 0 2px #fff !important;
+    animation: compiled-pulse 2.4s ease-in-out infinite;
+}
+
+.game-board .protocol-display.has-identity.compiled::before {
+    opacity: 0.35;
+}
+
+.game-board .protocol-display.has-identity.compiled .protocol-name,
+.game-board .protocol-display.has-identity.compiled .protocol-value {
+    color: #fff !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+}
+
+.game-board .protocol-display.has-identity.compiled .protocol-compiled-badge {
+    display: block;
+    position: absolute;
+    right: 3.2em;
+    top: 50%;
+    transform: translateY(-50%) rotate(-5deg);
+    padding: 0 0.4em;
+    border: 1.5px solid #fff;
+    border-radius: 4px;
+    background: rgba(10, 5, 26, 0.55);
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+@keyframes compiled-pulse {
+    50% { box-shadow: 0 0 22px var(--accent), inset 0 0 0 2px #fff; }
+}
+
+/* Narrow cells (phones, tablets): just a ✓ seal so the name stays readable */
+@media (max-width: 1100px) {
+    .game-board .protocol-display.has-identity.compiled .protocol-compiled-badge {
+        right: 1.9em;
+        padding: 0 0.3em;
+        font-size: 0.7rem;
+        transform: translateY(-50%);
+        border-radius: 50%;
+    }
+
+    .game-board .protocol-display.has-identity.compiled .badge-text {
+        display: none;
+    }
+}

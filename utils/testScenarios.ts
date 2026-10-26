@@ -4829,3 +4829,44 @@ export const allScenarios: TestScenario[] = [
 	scenario89_Speed3Test,
 	scenario90_Plague0Test
 ];
+
+/**
+ * Showcase: compiled protocols on both sides (visual check of the protocol bar)
+ */
+export const scenarioCompiledShowcase: TestScenario = {
+    name: "Compiled protocols showcase",
+    description: "Player has Fire compiled, opponent has Death compiled; a few cards on the board",
+    setup: (state: GameState) => {
+        let newState = initScenarioBase(state, ['Hate', 'Fire', 'Water'], ['Psychic', 'Death', 'Diversity'], 'player', 'action');
+        newState.player.hand = [createCard('Hate', 0, true), createCard('Water', 1, true)];
+        newState = placeCard(newState, 'player', 0, createCard('Hate', 2, true));
+        newState = placeCard(newState, 'player', 2, createCard('Water', 4, true));
+        newState = placeCard(newState, 'opponent', 0, createCard('Psychic', 1, true));
+        newState = placeCard(newState, 'opponent', 2, createCard('Diversity', 3, true));
+        newState = recalculateAllLaneValues(newState);
+        const final = finalizeScenario(newState);
+        return {
+            ...final,
+            player: { ...final.player, compiled: [false, true, false] },
+            opponent: { ...final.opponent, compiled: [false, true, false] },
+        };
+    }
+};
+
+/**
+ * Showcase: player can compile lane 0 right away (visual check of compile effects)
+ */
+export const scenarioCompileNow: TestScenario = {
+    name: "Compile now",
+    description: "Player has 11 in the Hate line at the start of their turn",
+    setup: (state: GameState) => {
+        let newState = initScenarioBase(state, ['Hate', 'Fire', 'Water'], ['Psychic', 'Death', 'Diversity'], 'player', 'start');
+        newState.player.hand = [createCard('Fire', 1, true), createCard('Water', 1, true)];
+        newState = placeCard(newState, 'player', 0, createCard('Hate', 5, true));
+        newState = placeCard(newState, 'player', 0, createCard('Hate', 4, true));
+        newState = placeCard(newState, 'player', 0, createCard('Fire', 2, false));
+        newState = placeCard(newState, 'opponent', 0, createCard('Psychic', 1, true));
+        newState = recalculateAllLaneValues(newState);
+        return finalizeScenario(newState);
+    }
+};
