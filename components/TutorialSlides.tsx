@@ -145,8 +145,8 @@ const SLIDES: Slide[] = [
     {
         title: 'Play a friend online',
         body: <ul>
-            <li>Tap <b>Play a Friend Online</b> → <b>Create room</b> and send the invite link (or the 4-letter code).</li>
-            <li>Your friend opens the link and you draft protocols together: 1-2-2-1.</li>
+            <li>Rooms are private: the site owner taps <b>Play a Friend Online</b> → <b>Create room</b> and sends the invite link. Only someone with that link (or its full code) can join.</li>
+            <li>A coin toss decides who picks the first protocol and takes the first turn, then you draft together: 1-2-2-1.</li>
             <li>Tap <b>💬</b> to chat. Quick replies like "Nice move!" are one tap away.</li>
             <li>The room creator's phone runs the game, so <b>keep it open in the foreground</b>. If a phone sleeps or switches networks, the game reconnects by itself. If the page reloads, use <b>Rejoin</b> on the menu.</li>
         </ul>,

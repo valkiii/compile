@@ -44,6 +44,7 @@ import { HostChannel } from '../multiplayer/hostChannel';
 import { OnlineGameSetup, isOnlineMessage } from '../multiplayer/messages';
 import { useGuestGame } from '../multiplayer/useGuestGame';
 import { OnlineStatusBar } from '../components/OnlineStatusBar';
+import type { CoinToss } from './ProtocolSelection';
 import '../styles/layouts/tutorial.css';
 
 const SOLO_DECK_OUT_REASON = 'Your deck ran dry. In a Solo Deck Run your trash is never reshuffled.';
@@ -64,6 +65,8 @@ interface GameScreenProps {
   initialScenarioSetup?: ((state: GameState) => GameState) | null;
   // Online multiplayer (mode 'online')
   online?: OnlineGameProps;
+  /** Coin toss done before the draft (its winner picks first and starts): no toss in the game */
+  coinToss?: CoinToss | null;
 }
 
 export interface OnlineGameProps {
@@ -126,7 +129,7 @@ export function GameScreen(props: GameScreenProps) {
 /**
  * GameScreenContent - Main game screen content
  */
-function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtocols, difficulty, useControlMechanic, mode = 'standard', startingPlayer = 'player', initialScenarioSetup, online, hostChannel }: GameScreenProps & { hostChannel: HostChannel | null }) {
+function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtocols, difficulty, useControlMechanic, mode = 'standard', startingPlayer = 'player', initialScenarioSetup, online, hostChannel, coinToss }: GameScreenProps & { hostChannel: HostChannel | null }) {
   const isOnline = mode === 'online' && !!online;
   const isGuest = isOnline && online!.role === 'guest';
   const isCompact = useIsCompact();
@@ -139,8 +142,8 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
   const onlineStarter: Player | null = isOnline
     ? (isGuest ? (online!.setup.startingPlayer === 'player' ? 'opponent' : 'player') : online!.setup.startingPlayer)
     : null;
-  const [actualStartingPlayer, setActualStartingPlayer] = useState<Player | null>(onlineStarter);
-  const [showCoinFlip, setShowCoinFlip] = useState(!isOnline);
+  const [actualStartingPlayer, setActualStartingPlayer] = useState<Player | null>(onlineStarter ?? coinToss?.starter ?? null);
+  const [showCoinFlip, setShowCoinFlip] = useState(!isOnline && !coinToss);
 
   // Statistics tracking
   const {
@@ -157,6 +160,15 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
     setShowCoinFlip(false);
     trackPlayerCoinFlip(choice, won);
   }, [trackPlayerCoinFlip]);
+
+  // The toss that happened before the draft still counts in the statistics
+  const tossTrackedRef = useRef(false);
+  useEffect(() => {
+    if (coinToss && !tossTrackedRef.current) {
+      tossTrackedRef.current = true;
+      trackPlayerCoinFlip(coinToss.choice, coinToss.won);
+    }
+  }, [coinToss, trackPlayerCoinFlip]);
 
   // Debug: Skip coin flip for test scenarios
   const handleSkipCoinFlip = useCallback(() => {

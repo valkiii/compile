@@ -16,7 +16,7 @@ import { invalidateCardCache } from '../utils/gameLogic';
 import { Card as CardData } from '../data/cards';
 import { protocolTileUrl } from '../data/cardArt';
 import { RelayClient, Role } from '../multiplayer/relayClient';
-import { DraftState, ONLINE_DRAFT_STEPS, OnlineGameSetup, isOnlineMessage } from '../multiplayer/messages';
+import { DraftState, onlineDraftSteps, OnlineGameSetup, isOnlineMessage } from '../multiplayer/messages';
 import '../styles/layouts/protocol-selection.css';
 import '../styles/layouts/online.css';
 
@@ -48,18 +48,23 @@ export function OnlineDraft({ client, role, useControl, onStart, onLeave }: Onli
     const allProtocols = useMemo(() => Array.from(new Set(cards.map(c => c.protocol))).sort(), [cards]);
 
     const [draft, setDraft] = useState<DraftState>(() => ({
+        // Coin toss at the start of the draft: the winner picks first and starts the game
+        first: Math.random() < 0.5 ? 'host' : 'guest',
         step: 0,
         hostPicks: [],
         guestPicks: [],
         categories: allCategories.filter(c => !DEFAULT_OFF.includes(c)),
     }));
     const [selection, setSelection] = useState<string[]>([]);
+    // The guest only knows the toss result once the host's draft arrives
+    const [synced, setSynced] = useState(isHost);
     const [preview, setPreview] = useState<string | null>(null);
     const draftRef = useRef(draft);
     draftRef.current = draft;
     const startedRef = useRef(false);
 
-    const step = ONLINE_DRAFT_STEPS[draft.step];
+    const steps = onlineDraftSteps(draft.first);
+    const step = steps[draft.step];
     const myTurn = !!step && step.who === role;
     const myPicks = isHost ? draft.hostPicks : draft.guestPicks;
     const theirPicks = isHost ? draft.guestPicks : draft.hostPicks;
@@ -69,7 +74,7 @@ export function OnlineDraft({ client, role, useControl, onStart, onLeave }: Onli
     // Host: apply a pick (own or the guest's) and broadcast
     const applyPick = (who: 'host' | 'guest', protocols: string[]) => {
         const current = draftRef.current;
-        const s = ONLINE_DRAFT_STEPS[current.step];
+        const s = onlineDraftSteps(current.first)[current.step];
         if (!s || s.who !== who || protocols.length !== s.picks) return;
         const taken = new Set([...current.hostPicks, ...current.guestPicks]);
         if (protocols.some(p => taken.has(p) || !allProtocols.includes(p)) || new Set(protocols).size !== protocols.length) return;
@@ -86,13 +91,13 @@ export function OnlineDraft({ client, role, useControl, onStart, onLeave }: Onli
     useEffect(() => {
         if (!isHost) return;
         client.send({ k: 'draft', draft });
-        if (draft.step >= ONLINE_DRAFT_STEPS.length && !startedRef.current) {
+        if (draft.step >= steps.length && !startedRef.current) {
             startedRef.current = true;
             const setup: OnlineGameSetup = {
                 gameId: uuidv4(),
                 hostProtocols: draft.hostPicks,
                 guestProtocols: draft.guestPicks,
-                startingPlayer: Math.random() < 0.5 ? 'player' : 'opponent',
+                startingPlayer: draft.first === 'host' ? 'player' : 'opponent',
                 useControl,
             };
             setTimeout(() => {
@@ -109,7 +114,10 @@ export function OnlineDraft({ client, role, useControl, onStart, onLeave }: Onli
             const msg = event.data;
             if (isHost && msg.k === 'draftPick') applyPick('guest', msg.protocols);
             if (isHost && msg.k === 'sync') client.send({ k: 'draft', draft: draftRef.current });
-            if (!isHost && msg.k === 'draft') setDraft(msg.draft);
+            if (!isHost && msg.k === 'draft') {
+                setDraft(msg.draft);
+                setSynced(true);
+            }
             // The guest's switch to the game ('start') is routed by the App
         });
         if (!isHost) client.send({ k: 'sync' });
@@ -144,6 +152,7 @@ export function OnlineDraft({ client, role, useControl, onStart, onLeave }: Onli
         }));
     };
 
+    const iWonToss = draft.first === role;
     const status = !step
         ? 'Draft complete. Starting the game…'
         : myTurn
@@ -167,6 +176,9 @@ export function OnlineDraft({ client, role, useControl, onStart, onLeave }: Onli
             </div>
 
             <div className="protocol-grid-container">
+                {synced && draft.step === 0 && (
+                    <p className="online-toss">🪙 Coin toss: {iWonToss ? 'you won! You pick first and start the game.' : 'your rival won. They pick first and start the game.'}</p>
+                )}
                 <p className={myTurn ? 'online-your-turn' : ''}>{status}</p>
                 <div className="category-filters">
                     {allCategories.map(category => (

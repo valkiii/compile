@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { MainMenu } from './screens/MainMenu';
-import { ProtocolSelection } from './screens/ProtocolSelection';
+import { ProtocolSelection, CoinToss } from './screens/ProtocolSelection';
 import { GameScreen } from './screens/GameScreen';
 import { ResultsScreen } from './screens/ResultsScreen';
 import { CardLibraryScreen } from './screens/CardLibraryScreen';
@@ -15,7 +15,8 @@ import { RulesScreen } from './screens/RulesScreen';
 import { TutorialScreen } from './screens/TutorialScreen';
 import { OnlineLobby } from './screens/OnlineLobby';
 import { OnlineDraft } from './screens/OnlineDraft';
-import { RelayClient, Role, loadSavedSession } from './multiplayer/relayClient';
+import { RelayClient, Role, loadSavedSession, setOwnerKey } from './multiplayer/relayClient';
+import { takeFragmentParams } from './multiplayer/invite';
 import { OnlineGameSetup, isOnlineMessage } from './multiplayer/messages';
 import { clearHostGame, loadHostGame, saveHostGame } from './multiplayer/savedGame';
 import { OnlineChat } from './components/OnlineChat';
@@ -44,36 +45,30 @@ export function App() {
   const [finalGameState, setFinalGameState] = useState<GameState | null>(null);
   const [useControl, setUseControl] = useState(true);
   const [startingPlayer, setStartingPlayer] = useState<Player>('player');
+  const [coinToss, setCoinToss] = useState<CoinToss | null>(null);
   const [initialScenarioSetup, setInitialScenarioSetup] = useState<((state: GameState) => GameState) | null>(null);
 
   // Online multiplayer
   const [online, setOnline] = useState<OnlineConnection | null>(null);
   const [onlineSetup, setOnlineSetup] = useState<OnlineGameSetup | null>(null);
   const [onlineResumeState, setOnlineResumeState] = useState<GameState | null>(null);
-  const [joinCode] = useState<string | null>(() => {
-    try {
-      return new URLSearchParams(window.location.search).get('join');
-    } catch {
-      return null;
-    }
-  });
+  // Invite (#join=…&invite=…) and owner (#owner=…) links: read once, then wiped from the address bar
+  const [fragment] = useState(() => takeFragmentParams());
+  const [ownerNotice, setOwnerNotice] = useState(false);
   const [savedSession, setSavedSession] = useState(() => loadSavedSession());
   const screenRef = React.useRef(screen);
   screenRef.current = screen;
   const onlineSetupRef = React.useRef(onlineSetup);
   onlineSetupRef.current = onlineSetup;
 
-  // Invite links open the lobby straight away
   useEffect(() => {
-    if (joinCode) {
-      setScreen('OnlineLobby');
-      // Drop ?join= so a reload doesn't try to join the same room again (keep other params)
-      const params = new URLSearchParams(window.location.search);
-      params.delete('join');
-      const rest = params.toString();
-      window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+    if (fragment.ownerKey) {
+      setOwnerKey(fragment.ownerKey);
+      setOwnerNotice(true);
     }
-  }, [joinCode]);
+    // Invite links open the lobby straight away
+    if (fragment.invite) setScreen('OnlineLobby');
+  }, [fragment]);
 
   // Load default custom protocols on app start (Anarchy_custom for testing)
   useEffect(() => {
@@ -140,6 +135,7 @@ export function App() {
 
   const handleBackToMenu = useCallback(() => {
     setScreen('MainMenu');
+    setCoinToss(null);
     setPlayerProtocols([]);
     setOpponentProtocols([]);
     setWinner(null);
@@ -263,13 +259,15 @@ export function App() {
     };
   }, [handleBackToMenu, online]);
 
-  const startGame = useCallback((playerProtos: string[], opponentProtos: string[]) => {
+  const startGame = useCallback((playerProtos: string[], opponentProtos: string[], toss: CoinToss) => {
     setPlayerProtocols(playerProtos);
     setOpponentProtocols(opponentProtos);
     setWinner(null);
     setFinalGameState(null);
-    setStartingPlayer('player'); // Reset, will be set by coin flip
-    setScreen('GameScreen'); // Go directly to game, coin flip will show as overlay
+    // The coin toss already happened before the draft: its winner starts
+    setCoinToss(toss);
+    setStartingPlayer(toss.starter);
+    setScreen('GameScreen');
   }, []);
 
   const handleEndGame = useCallback((winner: Player, finalState: GameState, reason?: string) => {
@@ -298,7 +296,7 @@ export function App() {
       case 'OnlineLobby':
         return (
           <OnlineLobby
-            initialJoinCode={joinCode}
+            initialInvite={fragment.invite}
             onReady={handleOnlineReady}
             onBack={online ? leaveOnline : handleBackToMenu}
           />
@@ -334,6 +332,7 @@ export function App() {
             useControlMechanic={useControl}
             mode={gameMode}
             startingPlayer={startingPlayer}
+            coinToss={gameMode === 'standard' || gameMode === 'solo' ? coinToss : null}
             initialScenarioSetup={initialScenarioSetup}
             online={gameMode === 'online' && online && onlineSetup ? {
               client: online.client,
@@ -378,6 +377,11 @@ export function App() {
 
   return (
     <>
+      {ownerNotice && (
+        <button className="owner-notice" onClick={() => setOwnerNotice(false)}>
+          This device can now open private online rooms. ✕
+        </button>
+      )}
       {renderScreen()}
       {showChat && <OnlineChat key={chatRoom} client={online!.client} room={chatRoom!} inGame={screen === 'GameScreen'} />}
     </>

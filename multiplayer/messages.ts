@@ -10,19 +10,24 @@ import { AIAction, GameState, Player } from '../types';
 import { AnimationQueueItem } from '../types/animation';
 
 export interface DraftState {
+    /** Coin toss (done by the host at the start): this player picks first and starts the game */
+    first: 'host' | 'guest';
     step: number;
     hostPicks: string[];
     guestPicks: string[];
     categories: string[];
 }
 
-/** Draft order 1-2-2-1, host first (same as the vs-AI draft). */
-export const ONLINE_DRAFT_STEPS: { who: 'host' | 'guest'; picks: number }[] = [
-    { who: 'host', picks: 1 },
-    { who: 'guest', picks: 2 },
-    { who: 'host', picks: 2 },
-    { who: 'guest', picks: 1 },
-];
+/** Draft order 1-2-2-1; the coin toss winner picks first (same as the vs-AI draft). */
+export function onlineDraftSteps(first: 'host' | 'guest'): { who: 'host' | 'guest'; picks: number }[] {
+    const second = first === 'host' ? 'guest' : 'host';
+    return [
+        { who: first, picks: 1 },
+        { who: second, picks: 2 },
+        { who: first, picks: 2 },
+        { who: second, picks: 1 },
+    ];
+}
 
 export interface OnlineGameSetup {
     gameId: string;

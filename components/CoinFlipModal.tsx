@@ -10,9 +10,11 @@ type FlipPhase = 'choose' | 'flipping' | 'result';
 
 interface CoinFlipModalProps {
   onComplete: (startingPlayer: 'player' | 'opponent', choice: CoinSide, won: boolean) => void;
+  /** Before a draft: the winner also picks the first protocol */
+  beforeDraft?: boolean;
 }
 
-export function CoinFlipModal({ onComplete }: CoinFlipModalProps) {
+export function CoinFlipModal({ onComplete, beforeDraft = false }: CoinFlipModalProps) {
   const [phase, setPhase] = useState<FlipPhase>('choose');
   const [playerChoice, setPlayerChoice] = useState<CoinSide | null>(null);
   const [flipResult, setFlipResult] = useState<CoinSide | null>(null);
@@ -49,7 +51,7 @@ export function CoinFlipModal({ onComplete }: CoinFlipModalProps) {
         {phase === 'choose' && (
           <>
             <h2>Coin Flip</h2>
-            <p>Choose heads or tails to determine who starts the game.</p>
+            <p>{beforeDraft ? 'Choose heads or tails. The winner picks the first protocol and starts the game.' : 'Choose heads or tails to determine who starts the game.'}</p>
             <div className="coin-flip-choices">
               <button
                 className="btn coin-flip-choice-btn"
@@ -96,9 +98,9 @@ export function CoinFlipModal({ onComplete }: CoinFlipModalProps) {
               The coin landed on: <span className="coin-flip-highlight">{flipResult === 'heads' ? 'Heads' : 'Tails'}</span>
             </p>
             {flipResult === playerChoice ? (
-              <p className="coin-flip-winner-text">You won! You will start the game.</p>
+              <p className="coin-flip-winner-text">{beforeDraft ? 'You won! You pick first and start the game.' : 'You won! You will start the game.'}</p>
             ) : (
-              <p className="coin-flip-loser-text">Opponent won! Opponent will start the game.</p>
+              <p className="coin-flip-loser-text">{beforeDraft ? 'Opponent won! They pick first and start the game.' : 'Opponent won! Opponent will start the game.'}</p>
             )}
             <button className="btn" onClick={handleContinue}>
               Continue

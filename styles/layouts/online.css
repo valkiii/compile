@@ -205,3 +205,39 @@
 .online-draft .online-draft-picks { order: 0; }
 .online-draft .protocol-grid-container { order: 1 !important; }
 .online-draft .selected-protocol-cards-container { order: 2; }
+
+.online-code.online-code-long {
+    font-size: clamp(1.4rem, 7vw, 2.2rem);
+    letter-spacing: 0.15rem;
+}
+
+.online-code-input.online-code-input-long {
+    font-size: 1.1rem;
+    letter-spacing: 0.1rem;
+}
+
+.owner-notice {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3000;
+    max-width: calc(100vw - 24px);
+    padding: 0.6rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--primary-color);
+    background: var(--surface-color);
+    color: var(--primary-color);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.online-toss {
+    color: var(--text-color) !important;
+    font-weight: 600;
+    background: hsla(51, 100%, 50%, 0.08);
+    border: 1px solid hsla(51, 100%, 50%, 0.4);
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+}

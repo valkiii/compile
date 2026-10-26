@@ -2,27 +2,23 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * Online connection between the two phones, peer-to-peer over WebRTC (PeerJS).
- * No server of our own: the free public PeerJS broker only introduces the phones, then
- * they talk directly, or through the TURN relay in iceServers.ts when networks block that.
+ * Online connection through the invite-only relay on the owner's home server
+ * (server/relay.py behind Tailscale Funnel). Plain outbound secure WebSockets, so it works
+ * on any network; no third-party services.
  *
- * The host registers the peer id derived from the room code; the guest connects to it.
- * Handles reconnecting after network switches or the phone sleeping, and re-attaching
- * to the room after a page reload (session saved in localStorage).
+ * Only devices holding the owner key can open rooms; guests join with room code + invite
+ * key (both in the invite link). Handles reconnecting after network switches or the phone
+ * sleeping, and re-attaching to the room after a page reload (session in localStorage).
  */
-
-import Peer, { DataConnection } from 'peerjs';
-import { iceServers } from './iceServers';
 
 export type Role = 'host' | 'guest';
 
 export interface OnlineSessionInfo {
     room: string;
     role: Role;
-    /** Identifies the guest to the host, so a stranger with the code can't take the seat. */
     token: string;
-    /** Host only: token of the guest who joined first. */
-    guestToken?: string;
+    /** Host only: the room's invite key (goes into the invite link). */
+    invite?: string;
 }
 
 export type RelayEvent =
@@ -32,24 +28,37 @@ export type RelayEvent =
     | { type: 'message'; data: unknown }
     | { type: 'error'; code: string };
 
-type Envelope =
-    | { t: 'hello'; token: string }
-    | { t: 'welcome' }
-    | { t: 'taken' }
-    | { t: 'leave' }
-    | { t: 'ping' }
-    | { t: 'pong' }
-    | { t: 'msg'; data: unknown };
-
+const DEFAULT_RELAY_URL = 'wss://pihole1.tail448243.ts.net:10000/compile-relay';
 const SESSION_KEY = 'compile_online_session';
-const PEER_PREFIX = 'compile-main-v1-';
-const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
-const HEARTBEAT_MS = 4000;
-const PEER_TIMEOUT_MS = 14000;
+const OWNER_KEY_STORAGE = 'compile_owner_key';
 
-const peerIdFor = (room: string) => PEER_PREFIX + room.toUpperCase();
-const randomCode = () => Array.from({ length: 4 }, () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]).join('');
-const randomToken = () => Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+export function relayUrl(): string {
+    try {
+        const fromQuery = new URLSearchParams(window.location.search).get('relay');
+        if (fromQuery) return fromQuery;
+    } catch {
+        // ignore
+    }
+    return DEFAULT_RELAY_URL;
+}
+
+/** The owner key lets this device open rooms. Set once by opening the site with ?owner=KEY. */
+export function getOwnerKey(): string | null {
+    try {
+        return localStorage.getItem(OWNER_KEY_STORAGE);
+    } catch {
+        return null;
+    }
+}
+
+export function setOwnerKey(key: string | null) {
+    try {
+        if (key) localStorage.setItem(OWNER_KEY_STORAGE, key);
+        else localStorage.removeItem(OWNER_KEY_STORAGE);
+    } catch {
+        // ignore
+    }
+}
 
 export function loadSavedSession(): OnlineSessionInfo | null {
     try {
@@ -70,26 +79,24 @@ function saveSession(session: OnlineSessionInfo | null) {
 }
 
 type Listener = (event: RelayEvent) => void;
+type Intent = { t: 'create'; ownerKey: string } | { t: 'join'; room: string; invite: string };
 
 export class RelayClient {
-    private peer: Peer | null = null;
-    private conn: DataConnection | null = null;
+    private ws: WebSocket | null = null;
     private listeners = new Set<Listener>();
-    private outbox: unknown[] = [];
-    private closed = false;
-    private joinedOnce = false;
+    private outbox: string[] = [];
+    private intent: Intent | null = null;
+    private retry = 0;
     private retryTimer: ReturnType<typeof setTimeout> | null = null;
-    private heartbeat: ReturnType<typeof setInterval> | null = null;
-    private lastHeard = 0;
-    private createAttempts = 0;
-    private joinAttempts = 0;
-    private connectTimer: ReturnType<typeof setTimeout> | null = null;
+    private pingTimer: ReturnType<typeof setInterval> | null = null;
+    private closed = false;
+    private attached = false;
 
     session: OnlineSessionInfo | null = null;
-    connected = false;      // registered with the broker (host) / have a peer object (guest)
-    peerConnected = false;  // the other phone is connected and greeted
+    connected = false;
+    peerConnected = false;
 
-    constructor() {
+    constructor(private url: string = relayUrl()) {
         document.addEventListener('visibilitychange', this.onWake);
         window.addEventListener('online', this.onWake);
     }
@@ -99,38 +106,37 @@ export class RelayClient {
         return () => this.listeners.delete(listener);
     }
 
-    create() {
-        this.session = { room: randomCode(), role: 'host', token: randomToken() };
-        this.startHost(true);
+    create(ownerKey: string) {
+        this.intent = { t: 'create', ownerKey };
+        this.ensureOpen();
     }
 
-    join(room: string) {
-        this.session = { room: room.toUpperCase().trim(), role: 'guest', token: randomToken() };
-        this.joinedOnce = false;
-        this.joinAttempts = 0;
-        this.startGuest();
+    join(room: string, invite: string) {
+        this.intent = { t: 'join', room: room.toUpperCase().trim(), invite: invite.toUpperCase().trim() };
+        this.ensureOpen();
     }
 
     resume(session: OnlineSessionInfo) {
         this.session = session;
-        this.joinedOnce = true;
-        if (session.role === 'host') this.startHost(false);
-        else this.startGuest();
+        this.ensureOpen();
     }
 
-    /** Send game data to the other player. */
+    /** Send game data to the other player. Only guest moves are queued while offline: the host re-sends everything on 'sync'. */
     send(data: unknown) {
-        if (this.conn?.open && this.peerConnected) this.write({ t: 'msg', data });
-        // The host re-sends everything on the guest's 'sync', so only guest moves are queued
-        else if (this.session?.role === 'guest') this.outbox.push(data);
+        const frame = JSON.stringify({ t: 'msg', data });
+        if (this.ws?.readyState === WebSocket.OPEN && this.attached) this.ws.send(frame);
+        else if (this.session?.role !== 'host') this.outbox.push(frame);
     }
 
-    /** Leave the room for good: the other player is told. */
+    /** Leave the room for good (the other player is told, the room is closed). */
     leave() {
-        this.write({ t: 'leave' });
+        try {
+            if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: 'leave' }));
+        } catch {
+            // ignore
+        }
         saveSession(null);
-        // Give the goodbye a moment to go out
-        setTimeout(() => this.dispose(), 300);
+        setTimeout(() => this.dispose(), 200);
     }
 
     dispose() {
@@ -138,254 +144,128 @@ export class RelayClient {
         document.removeEventListener('visibilitychange', this.onWake);
         window.removeEventListener('online', this.onWake);
         if (this.retryTimer) clearTimeout(this.retryTimer);
-        if (this.heartbeat) clearInterval(this.heartbeat);
-        this.conn?.close();
-        this.peer?.destroy();
-        this.peer = null;
-        this.conn = null;
+        if (this.pingTimer) clearInterval(this.pingTimer);
+        this.ws?.close();
+        this.ws = null;
         this.listeners.clear();
-    }
-
-    // ---------------------------------------------------------------- host
-
-    private startHost(fresh: boolean) {
-        if (this.closed || !this.session) return;
-        this.peer?.destroy();
-        const peer = new Peer(peerIdFor(this.session.room), { debug: 0, config: { iceServers: iceServers() } });
-        this.peer = peer;
-
-        peer.on('open', () => {
-            this.createAttempts = 0;
-            this.setConnected(true);
-            saveSession(this.session);
-            this.emit({ type: 'session', session: this.session! });
-        });
-        peer.on('connection', conn => this.attachConnection(conn));
-        peer.on('disconnected', () => {
-            // Lost the broker (network switch / sleep). Existing data connection may survive.
-            this.setConnected(false);
-            this.later(() => !this.closed && peer === this.peer && !peer.destroyed && peer.reconnect(), 1500);
-        });
-        peer.on('error', err => {
-            const type = (err as { type?: string }).type;
-            if (type === 'unavailable-id') {
-                if (fresh && this.createAttempts++ < 5) {
-                    // Code collision: pick another
-                    this.session = { ...this.session!, room: randomCode() };
-                    this.startHost(true);
-                } else {
-                    // Our own old registration hasn't expired yet (page reload): retry shortly
-                    this.later(() => this.startHost(false), 3000);
-                }
-                return;
-            }
-            if (type === 'network' || type === 'server-error' || type === 'socket-error' || type === 'socket-closed') {
-                this.setConnected(false);
-                this.later(() => this.startHost(false), 3000);
-            }
-        });
-    }
-
-    // ---------------------------------------------------------------- guest
-
-    private startGuest() {
-        if (this.closed || !this.session) return;
-        if (!this.peer || this.peer.destroyed) {
-            const peer = new Peer({ debug: 0, config: { iceServers: iceServers() } });
-            this.peer = peer;
-            peer.on('open', () => {
-                this.setConnected(true);
-                this.connectToHost();
-            });
-            peer.on('disconnected', () => {
-                this.setConnected(false);
-                this.later(() => !this.closed && peer === this.peer && !peer.destroyed && peer.reconnect(), 1500);
-            });
-            peer.on('error', err => {
-                const type = (err as { type?: string }).type;
-                if (type === 'peer-unavailable') {
-                    // The host may just be in another app for a moment (iOS drops its registration):
-                    // retry a few times before telling a first-time joiner the room doesn't exist
-                    if (!this.joinedOnce && ++this.joinAttempts >= 5) {
-                        this.emit({ type: 'error', code: 'no_room' });
-                        return;
-                    }
-                    this.later(() => this.connectToHost(), 3000);
-                    return;
-                }
-                if (type === 'network' || type === 'server-error' || type === 'socket-error' || type === 'socket-closed') {
-                    this.setConnected(false);
-                    this.later(() => {
-                        this.peer?.destroy();
-                        this.peer = null;
-                        this.startGuest();
-                    }, 3000);
-                }
-            });
-        } else if (this.peer.open) {
-            this.connectToHost();
-        }
-    }
-
-    private connectToHost() {
-        if (this.closed || !this.peer || !this.peer.open || !this.session) return;
-        if (this.conn?.open) return;
-        const conn = this.peer.connect(peerIdFor(this.session.room), { reliable: true, serialization: 'binary' });
-        this.attachConnection(conn);
-        // A connection that never opens (host suspended, blocked network path): drop it and retry
-        if (this.connectTimer) clearTimeout(this.connectTimer);
-        this.connectTimer = setTimeout(() => {
-            if (this.closed || conn.open || this.conn === conn) return;
-            conn.close();
-            if (!this.joinedOnce) this.emit({ type: 'error', code: 'slow_connect' });
-            this.later(() => this.connectToHost(), 1000);
-        }, 15000);
-    }
-
-    // ---------------------------------------------------------------- shared
-
-    private attachConnection(conn: DataConnection) {
-        const isHost = this.session?.role === 'host';
-        conn.on('open', () => {
-            if (isHost) {
-                // Wait for the guest's hello before accepting
-                return;
-            }
-            if (this.conn && this.conn !== conn) this.conn.close();
-            this.conn = conn;
-            this.lastHeard = Date.now();
-            this.sendOn(conn, { t: 'hello', token: this.session!.token });
-        });
-        conn.on('data', raw => {
-            // Sent as JSON text: binary packing would turn absent fields into null, and the game
-            // logic distinguishes "undefined" from null (e.g. lane restrictions)
-            let env: Envelope;
-            try {
-                env = typeof raw === 'string' ? JSON.parse(raw) : (raw as Envelope);
-            } catch {
-                return;
-            }
-            this.onEnvelope(conn, env);
-        });
-        conn.on('close', () => this.onConnectionLost(conn));
-        conn.on('error', () => this.onConnectionLost(conn));
-        // ICE failure = the two networks can't reach each other directly (and no relay helped)
-        conn.on('iceStateChanged', state => {
-            if (state === 'failed') this.emit({ type: 'error', code: 'ice_failed' });
-        });
-    }
-
-    private onEnvelope(conn: DataConnection, env: Envelope) {
-        if (!env || typeof env !== 'object') return;
-        const isHost = this.session?.role === 'host';
-        if (conn === this.conn) this.lastHeard = Date.now();
-
-        switch (env.t) {
-            case 'hello': {
-                if (!isHost || !this.session) return;
-                if (this.session.guestToken && this.session.guestToken !== env.token) {
-                    this.sendOn(conn, { t: 'taken' });
-                    setTimeout(() => conn.close(), 200);
-                    return;
-                }
-                this.session = { ...this.session, guestToken: env.token };
-                saveSession(this.session);
-                if (this.conn && this.conn !== conn) this.conn.close();
-                this.conn = conn;
-                this.lastHeard = Date.now();
-                this.sendOn(conn, { t: 'welcome' });
-                this.markPeer(true);
-                break;
-            }
-            case 'welcome':
-                if (isHost) return;
-                this.joinedOnce = true;
-                saveSession(this.session);
-                this.emit({ type: 'session', session: this.session! });
-                this.markPeer(true);
-                break;
-            case 'taken':
-                this.emit({ type: 'error', code: 'taken' });
-                this.closed = true;
-                break;
-            case 'leave':
-                this.peerConnected = false;
-                saveSession(null);
-                this.emit({ type: 'peer', connected: false, left: true });
-                break;
-            case 'ping':
-                this.sendOn(conn, { t: 'pong' });
-                break;
-            case 'msg':
-                this.emit({ type: 'message', data: env.data });
-                break;
-        }
-    }
-
-    private markPeer(connected: boolean) {
-        if (connected) {
-            this.peerConnected = true;
-            this.emit({ type: 'peer', connected: true });
-            const queued = this.outbox.splice(0);
-            queued.forEach(data => this.write({ t: 'msg', data }));
-            this.startHeartbeat();
-        } else if (this.peerConnected) {
-            this.peerConnected = false;
-            this.emit({ type: 'peer', connected: false });
-        }
-    }
-
-    private onConnectionLost(conn: DataConnection) {
-        if (conn !== this.conn) return;
-        this.conn = null;
-        this.markPeer(false);
-        if (!this.closed && this.session?.role === 'guest') this.later(() => this.startGuest(), 1500);
-    }
-
-    /** Detect a silently dead connection (phone locked, tunnel...) quickly. */
-    private startHeartbeat() {
-        if (this.heartbeat) clearInterval(this.heartbeat);
-        this.heartbeat = setInterval(() => {
-            if (!this.conn) return;
-            if (Date.now() - this.lastHeard > PEER_TIMEOUT_MS) {
-                const dead = this.conn;
-                dead.close();
-                this.onConnectionLost(dead);
-                return;
-            }
-            this.write({ t: 'ping' });
-        }, HEARTBEAT_MS);
-    }
-
-    private onWake = () => {
-        if (document.visibilityState !== 'visible' || this.closed || !this.session) return;
-        if (this.peer?.disconnected && !this.peer.destroyed) this.peer.reconnect();
-        if (this.session.role === 'guest' && !this.conn?.open) this.startGuest();
-        if (this.session.role === 'host' && (!this.peer || this.peer.destroyed)) this.startHost(false);
-    };
-
-    private write(env: Envelope) {
-        if (this.conn) this.sendOn(this.conn, env);
-    }
-
-    private sendOn(conn: DataConnection, env: Envelope) {
-        try {
-            if (conn.open) conn.send(JSON.stringify(env));
-        } catch {
-            // connection is going away; the close handler takes over
-        }
-    }
-
-    private later(fn: () => void, ms: number) {
-        if (this.retryTimer) clearTimeout(this.retryTimer);
-        this.retryTimer = setTimeout(() => {
-            this.retryTimer = null;
-            if (!this.closed) fn();
-        }, ms);
     }
 
     private emit(event: RelayEvent) {
         this.listeners.forEach(l => l(event));
+    }
+
+    private onWake = () => {
+        // iOS suspends sockets in the background; reconnect as soon as the page is back
+        if (document.visibilityState === 'visible' && !this.closed
+            && (!this.ws || this.ws.readyState === WebSocket.CLOSED || this.ws.readyState === WebSocket.CLOSING)) {
+            this.retry = 0;
+            this.open();
+        }
+    };
+
+    private ensureOpen() {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.handshake();
+            return;
+        }
+        if (this.ws && this.ws.readyState === WebSocket.CONNECTING) return;
+        this.open();
+    }
+
+    private open() {
+        if (this.closed) return;
+        if (this.retryTimer) {
+            clearTimeout(this.retryTimer);
+            this.retryTimer = null;
+        }
+        this.attached = false;
+        let ws: WebSocket;
+        try {
+            ws = new WebSocket(this.url);
+        } catch {
+            this.scheduleReconnect();
+            return;
+        }
+        this.ws = ws;
+        ws.onopen = () => {
+            if (this.ws !== ws) return;
+            this.retry = 0;
+            this.setConnected(true);
+            this.handshake();
+            if (this.pingTimer) clearInterval(this.pingTimer);
+            this.pingTimer = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) ws.send('{"t":"ping"}');
+            }, 20000);
+        };
+        ws.onmessage = ev => this.onFrame(String(ev.data));
+        ws.onclose = () => {
+            if (this.ws !== ws) return;
+            this.attached = false;
+            this.setConnected(false);
+            if (this.peerConnected) {
+                this.peerConnected = false;
+                this.emit({ type: 'peer', connected: false });
+            }
+            if (this.pingTimer) clearInterval(this.pingTimer);
+            if (!this.closed) this.scheduleReconnect();
+        };
+        ws.onerror = () => ws.close();
+    }
+
+    private scheduleReconnect() {
+        const delay = Math.min(8000, 500 * 2 ** this.retry);
+        this.retry++;
+        this.retryTimer = setTimeout(() => this.open(), delay);
+    }
+
+    private handshake() {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        if (this.session) this.ws.send(JSON.stringify({ t: 'rejoin', room: this.session.room, role: this.session.role, token: this.session.token }));
+        else if (this.intent) this.ws.send(JSON.stringify(this.intent));
+    }
+
+    private onFrame(raw: string) {
+        let msg: Record<string, unknown>;
+        try {
+            msg = JSON.parse(raw);
+        } catch {
+            return;
+        }
+        switch (msg.t) {
+            case 'created':
+            case 'joined':
+            case 'rejoined': {
+                this.session = {
+                    room: msg.room as string,
+                    role: msg.role as Role,
+                    token: msg.token as string,
+                    invite: (msg.invite as string | undefined) ?? this.session?.invite,
+                };
+                this.intent = null;
+                this.attached = true;
+                saveSession(this.session);
+                this.emit({ type: 'session', session: this.session });
+                this.outbox.splice(0).forEach(frame => this.ws?.send(frame));
+                break;
+            }
+            case 'peer':
+                this.peerConnected = !!msg.connected;
+                if (msg.left) saveSession(null);
+                this.emit({ type: 'peer', connected: this.peerConnected, left: !!msg.left });
+                break;
+            case 'msg':
+                this.emit({ type: 'message', data: msg.data });
+                break;
+            case 'error':
+                if (msg.code === 'rejoin_failed') {
+                    this.session = null;
+                    saveSession(null);
+                }
+                // A failed create/join is final: don't retry the same request on reconnect
+                if (msg.code !== 'rejoin_failed') this.intent = null;
+                this.emit({ type: 'error', code: String(msg.code) });
+                break;
+        }
     }
 
     private setConnected(connected: boolean) {

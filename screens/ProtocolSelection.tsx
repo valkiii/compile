@@ -17,12 +17,20 @@ import { GameMode } from '../types';
 import { SOLO_PROTOCOL_PICKS } from '../logic/game/soloMode';
 import { useIsCompact } from '../hooks/useIsCompact';
 import { protocolTileUrl } from '../data/cardArt';
+import { CoinFlipModal } from '../components/CoinFlipModal';
+
+/** Result of the opening coin toss: the winner picks the first protocol and takes the first turn. */
+export interface CoinToss {
+  starter: 'player' | 'opponent';
+  choice: 'heads' | 'tails';
+  won: boolean;
+}
 
 
 interface ProtocolSelectionProps {
   mode?: GameMode;
   onBack: () => void;
-  onStartGame: (playerProtocols: string[], opponentProtocols: string[]) => void;
+  onStartGame: (playerProtocols: string[], opponentProtocols: string[], toss: CoinToss) => void;
 }
 
 const DRAFT_STEPS = [
@@ -39,7 +47,15 @@ const SOLO_STEPS = [
 ];
 
 export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: ProtocolSelectionProps) {
-  const SELECTION_STEPS = mode === 'solo' ? SOLO_STEPS : DRAFT_STEPS;
+  // The coin toss comes first: its winner picks first (draft order) and starts the game
+  const [toss, setToss] = useState<CoinToss | null>(null);
+  const SELECTION_STEPS = !toss
+    ? []
+    : mode === 'solo'
+      ? SOLO_STEPS
+      : toss.starter === 'player'
+        ? DRAFT_STEPS
+        : DRAFT_STEPS.map(s => ({ ...s, player: s.player === 'Player' ? 'Opponent' : 'Player' }));
   const isCompact = useIsCompact();
   // Phone: card text lists the player has closed (reopened by tapping the protocol again)
   const [hiddenLists, setHiddenLists] = useState<Set<string>>(new Set());
@@ -232,7 +248,7 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
   
   // This consolidated effect handles the entire opponent turn logic
   useEffect(() => {
-    if (isOpponentTurn && !isAnimating && step < SELECTION_STEPS.length) {
+    if (toss && isOpponentTurn && !isAnimating && step < SELECTION_STEPS.length) {
       
       const runOpponentTurn = async () => {
         setIsAnimating(true);
@@ -303,17 +319,17 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
 
       runOpponentTurn();
     }
-  }, [step, isOpponentTurn, isAnimating, chosenProtocols, currentStepInfo, enabledCategories, uniqueProtocols, getProtocolCategory]);
+  }, [toss, step, isOpponentTurn, isAnimating, chosenProtocols, currentStepInfo, enabledCategories, uniqueProtocols, getProtocolCategory]);
 
 
   // Finalizing and starting the game
   useEffect(() => {
-    if (step >= SELECTION_STEPS.length && !isAnimating) {
+    if (toss && step >= SELECTION_STEPS.length && !isAnimating) {
         setTimeout(() => {
-            onStartGame(playerProtocols, opponentProtocols);
+            onStartGame(playerProtocols, opponentProtocols, toss);
         }, 1000); // 1-second delay after the final protocol is revealed
     }
-  }, [step, isAnimating, onStartGame, playerProtocols, opponentProtocols]);
+  }, [toss, step, isAnimating, onStartGame, playerProtocols, opponentProtocols]);
   
   const getCardClassName = (protocol: string) => {
       const classNames = ['protocol-card', `card-protocol-${protocol.toLowerCase()}`];
@@ -325,6 +341,12 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
   };
 
   const getStatusMessage = () => {
+      if (!toss) return 'Coin toss: the winner picks first and starts the game.';
+      if (step === 0 && isPlayerTurn && currentSelection.length === 0) {
+        return mode === 'solo'
+          ? `You ${toss.won ? 'won' : 'lost'} the toss: ${toss.starter === 'player' ? 'you start' : 'the AI starts'}. Select ${currentStepInfo.picks} protocols.`
+          : `You won the toss: you pick first and start. Select ${currentStepInfo.picks} protocol.`;
+      }
       if (isAnimating && isOpponentTurn) return mode === 'solo' ? "Rolling 3 random protocols for the opponent..." : "Opponent is selecting protocols...";
       if (currentStepInfo?.player === 'Player') {
           return `Player, select ${currentStepInfo.picks} protocol(s). (${currentSelection.length}/${currentStepInfo.picks})`;
@@ -338,6 +360,9 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
   return (
     <div className="screen protocol-selection-screen">
       <Header title={mode === 'solo' ? 'Solo Run: Pick 3' : 'Protocol Selection'} onBack={onBack} />
+      {!toss && (
+        <CoinFlipModal beforeDraft={mode !== 'solo'} onComplete={(starter, choice, won) => setToss({ starter, choice, won })} />
+      )}
       <div className="protocol-selection-layout">
         <div className="protocol-selection-sidebar">
           <div className="player-protocols-area">
