@@ -16,6 +16,7 @@ import { useAnimationQueue } from '../contexts/AnimationQueueContext';
 
 interface GameBoardProps {
     gameState: GameState;
+    compact?: boolean;  // Phone layout: deck/trash live in the HUD instead of beside the lanes
     onLanePointerDown: (laneIndex: number, owner: Player) => void;
     onPlayFaceDown: (laneIndex: number) => void;
     onCardPointerDown: (card: PlayedCard, owner: Player, laneIndex: number) => void;
@@ -34,7 +35,7 @@ interface GameBoardProps {
     onTrashCardLeave?: () => void;
 }
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onLanePointerDown, onPlayFaceDown, onCardPointerDown, onCardPointerEnter, onCardPointerLeave, onOpponentHandCardPointerEnter, onOpponentHandCardPointerLeave, selectedCardId, sourceCardId, animatingCardIds, animatingCardInfo, onDeckClick, onTrashClick, onTrashCardHover, onTrashCardLeave }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false, onLanePointerDown, onPlayFaceDown, onCardPointerDown, onCardPointerEnter, onCardPointerLeave, onOpponentHandCardPointerEnter, onOpponentHandCardPointerLeave, selectedCardId, sourceCardId, animatingCardIds, animatingCardInfo, onDeckClick, onTrashClick, onTrashCardHover, onTrashCardLeave }) => {
     const { player, opponent, phase, turn, compilableLanes, actionRequired, controlCardHolder } = gameState;
     const { currentAnimation } = useAnimationQueue();
 
@@ -472,6 +473,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onLanePointerDo
             {/* Opponent's Side */}
             <div className={`player-side opponent-side ${turn === 'opponent' ? 'active-turn' : ''}`}>
                 {/* Deck/Trash for opponent - inside opponent-side so it aligns with lanes */}
+                {!compact && (
                 <DeckTrashArea
                     owner="opponent"
                     deckCount={opponent.deck.length}
@@ -482,6 +484,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onLanePointerDo
                     onTrashCardHover={(card) => onTrashCardHover?.(card, 'opponent')}
                     onTrashCardLeave={onTrashCardLeave}
                 />
+                )}
                 <div className="lanes">
                     {opponent.lanes.map((laneCards, i) => {
                         const { isPlayable: oppIsPlayable, isMatching: oppIsMatching } = getOpponentLanePlayability(i);
@@ -545,6 +548,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onLanePointerDo
             {/* Player's Side */}
             <div className={`player-side ${turn === 'player' ? 'active-turn' : ''}`}>
                 {/* Deck/Trash for player - inside player-side so it aligns with lanes */}
+                {!compact && (
                 <DeckTrashArea
                     owner="player"
                     deckCount={player.deck.length}
@@ -555,6 +559,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onLanePointerDo
                     onTrashCardHover={(card) => onTrashCardHover?.(card, 'player')}
                     onTrashCardLeave={onTrashCardLeave}
                 />
+                )}
                 <div className="lanes">
                     {player.lanes.map((laneCards, i) => {
                         const { isPlayable, isMatching, isCompilable } = getLanePlayability(i);
@@ -568,6 +573,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, onLanePointerDo
                             isEffectTarget={getLaneEffectTargetability(i)}
                             onLanePointerDown={() => onLanePointerDown(i, 'player')}
                             onPlayFaceDown={() => onPlayFaceDown(i)}
+                            compact={compact}
                             onCardPointerDown={(card) => onCardPointerDown(card, 'player', i)}
                             onCardPointerEnter={(card) => onCardPointerEnter(card, 'player')}
                             onCardPointerLeave={() => onCardPointerLeave()}

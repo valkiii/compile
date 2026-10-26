@@ -10,7 +10,7 @@ import { CardComponent } from '../components/Card';
 import { useGameState } from '../hooks/useGameState';
 import { GameBoard } from '../components/GameBoard';
 import { PhaseController } from '../components/PhaseController';
-import { GameState, Player, PlayedCard, Difficulty, ActionRequired, GamePhase } from '../types';
+import { GameState, Player, PlayedCard, Difficulty, ActionRequired, GamePhase, GameMode } from '../types';
 import { GameInfoPanel } from '../components/GameInfoPanel';
 import { LogModal } from '../components/LogModal';
 import { isCardTargetable } from '../utils/targeting';
@@ -33,16 +33,27 @@ import { hasRequireNonMatchingProtocolRule, hasAnyProtocolPlayRule, hasPlayOnOpp
 import { AnimationQueueProvider, useAnimationQueue } from '../contexts/AnimationQueueContext';
 import { AnimationOverlay } from '../components/AnimationOverlay';
 import { snapshotToGameState } from '../utils/snapshotUtils';
+import { useIsCompact, useIsPhoneLandscape } from '../hooks/useIsCompact';
+import { CardDetailSheet } from '../components/CardDetailSheet';
+import { MobileTopBar, MiniPile } from '../components/MobileGameHud';
+import { CoachHints } from '../components/CoachHints';
+import { TutorialSlides } from '../components/TutorialSlides';
+import { didPlayerReshuffle } from '../logic/game/soloMode';
+import '../styles/layouts/tutorial.css';
+
+const SOLO_DECK_OUT_REASON = 'Your deck ran dry. In a Solo Deck Run your trash is never reshuffled.';
+const SOLO_LOW_DECK_WARNING = 3;
 
 
 interface GameScreenProps {
   onBack: () => void;
   // FIX: Updated onEndGame prop type to match the expected signature from App.tsx and useGameState hook.
-  onEndGame: (winner: Player, finalState: GameState) => void;
+  onEndGame: (winner: Player, finalState: GameState, reason?: string) => void;
   playerProtocols: string[];
   opponentProtocols: string[];
   difficulty: Difficulty;
   useControlMechanic: boolean;
+  mode?: GameMode;
   startingPlayer?: Player;
   // E2E Testing: Setup function for complex test scenarios
   initialScenarioSetup?: ((state: GameState) => GameState) | null;
@@ -89,7 +100,10 @@ export function GameScreen(props: GameScreenProps) {
 /**
  * GameScreenContent - Main game screen content
  */
-function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtocols, difficulty, useControlMechanic, startingPlayer = 'player', initialScenarioSetup }: GameScreenProps) {
+function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtocols, difficulty, useControlMechanic, mode = 'standard', startingPlayer = 'player', initialScenarioSetup }: GameScreenProps) {
+  const isCompact = useIsCompact();
+  const isPhoneLandscape = useIsPhoneLandscape();
+  const [showHelp, setShowHelp] = useState(false);
   // Animation queue context for the new animation system
   const { isAnimating, currentAnimation, enqueueAnimation, enqueueAnimations, getIsAnimatingSync, getAnimationSync } = useAnimationQueue();
   // Determine starting player via coin flip on first mount
@@ -136,7 +150,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
   }, [showCoinFlip, actualStartingPlayer, startGameTracking]);
 
   // Wrap onEndGame to track statistics
-  const wrappedOnEndGame = useCallback((winner: Player, finalState: GameState) => {
+  const wrappedOnEndGame = useCallback((winner: Player, finalState: GameState, reason?: string) => {
     // Count compiles
     const compilesCount = finalState.player.compiled.filter(c => c).length;
 
@@ -148,7 +162,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
       finalState.stats.opponent,
       finalState.detailedGameStats
     );
-    onEndGame(winner, finalState);
+    onEndGame(winner, finalState, reason);
   }, [endGame, onEndGame]);
 
   // Initialize game state - will use 'player' initially, but that's ok because we don't show the game until coin flip is done
@@ -364,6 +378,20 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
       gameStateRef.current = gameState;
   }, [gameState]);
 
+  // Solo Deck Run: the run ends the moment the player's trash would be reshuffled into their deck
+  const soloPrevStateRef = useRef(gameState);
+  const soloEndedRef = useRef(false);
+  useEffect(() => {
+    const prev = soloPrevStateRef.current;
+    soloPrevStateRef.current = gameState;
+    if (mode !== 'solo' || soloEndedRef.current || gameState.winner) return;
+    if (didPlayerReshuffle(prev, gameState)) {
+      soloEndedRef.current = true;
+      const finalState = gameState;
+      setTimeout(() => wrappedOnEndGame('opponent', finalState, SOLO_DECK_OUT_REASON), 1200);
+    }
+  }, [gameState, mode, wrappedOnEndGame]);
+
   // E2E Testing: Apply initial scenario setup if provided
   const scenarioAppliedRef = useRef(false);
   useEffect(() => {
@@ -448,6 +476,13 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
 
   // Priority: 1) User hover, 2) Effect source card, 3) Last played card
   const previewState = hoveredCard || sourceCardInfo || lastPlayedCardInfo;
+
+  // Phone: the detail sheet only shows what the player tapped, and closes once the game moves on
+  useEffect(() => {
+    if (isCompact && !selectedCard) {
+      setHoveredCard(null);
+    }
+  }, [isCompact, gameState.log.length]);
 
   // NEW TOAST SYSTEM: Synchronized with animations
   // Effect 1: Show toast when animation with logMessage starts
@@ -871,8 +906,31 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
   }, [gameState.actionRequired]);
 
 
+  const phaseController = (
+    <PhaseController
+      gameState={gameState}
+      onFillHand={fillHand}
+      onSkipAction={skipAction}
+      onResolveOptionalDrawPrompt={resolveOptionalDrawPrompt}
+      onResolveOptionalDiscardCustomPrompt={resolveOptionalDiscardCustomPrompt}
+      onResolveOptionalEffectPrompt={resolveOptionalEffectPrompt}
+      onResolveVariableDiscard={resolveVariableDiscard}
+      onResolveRevealBoardCardPrompt={resolveRevealBoardCardPrompt}
+      onResolveControlMechanicPrompt={resolveControlMechanicPrompt}
+      onResolveCustomChoice={resolveCustomChoice}
+      selectedCardId={selectedCard}
+      multiSelectedCardIds={multiSelectedCardIds}
+      actionRequiredClass={actionRequiredClass}
+      isAnimating={isAnimating}
+      snapshotTurn={visualGameState.turn}
+      snapshotPhase={visualGameState.phase}
+    />
+  );
+
+  const displayedTurn = isAnimating ? visualGameState.turn : (gameState.actionRequired?.actor || visualGameState.turn);
+
   return (
-    <div className="screen game-screen">
+    <div className={`screen game-screen ${isCompact ? 'compact' : ''}`}>
         {debugModalPlayer && (
             <DebugModal
                 player={debugModalPlayer}
@@ -989,13 +1047,21 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
             ))}
         </div>
         {showLog && <LogModal log={gameState.log} onClose={() => setShowLog(false)} />}
-        <button className="btn log-button" onClick={() => setShowLog(true)}>Log</button>
+        {showHelp && (
+            <div className="modal-overlay help-overlay">
+                <div className="modal-content help-modal">
+                    <TutorialSlides onClose={() => setShowHelp(false)} />
+                </div>
+            </div>
+        )}
+        {!isCompact && <button className="btn log-button" onClick={() => setShowLog(true)}>Log</button>}
         <div className="game-screen-layout">
+            {!isCompact && (
             <div className="game-preview-container">
                 <h2 onClick={handleMainframeClick} style={{ cursor: 'pointer', userSelect: 'none' }} title="Click 5 times to toggle debug mode">Mainframe</h2>
                 <GameInfoPanel
                     gameState={visualGameState}
-                    turn={isAnimating ? visualGameState.turn : (gameState.actionRequired?.actor || visualGameState.turn)}
+                    turn={displayedTurn}
                     difficulty={difficulty}
                     phaseTransitionAnimation={phaseTransitionAnimation}
                     overridePhase={overridePhase}
@@ -1006,12 +1072,35 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 <div className="preview-card-area">
                     {renderPreview()}
                 </div>
+                <button className="btn btn-back" onClick={() => setShowHelp(true)}>
+                    How to play
+                </button>
                 <button className="btn btn-back" onClick={onBack}>
                     Back
                 </button>
             </div>
+            )}
 
             <div className="game-main-area">
+                {isCompact && (
+                  <MobileTopBar
+                    opponent={visualGameState.opponent}
+                    difficultyLabel={difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                    turn={displayedTurn}
+                    phase={overridePhase ?? visualGameState.phase}
+                    onQuit={onBack}
+                    onShowLog={() => setShowLog(true)}
+                    onShowHelp={() => setShowHelp(true)}
+                    onPileClick={(owner) => setDebugModalPlayer(owner)}
+                  />
+                )}
+                {isCompact && hoveredCard && (
+                  <CardDetailSheet
+                    card={hoveredCard.card}
+                    showContents={hoveredCard.showContents}
+                    onClose={() => setHoveredCard(null)}
+                  />
+                )}
                 {isCompilePromptVisible && (
                   <div className="compile-prompt-container">
                     <h3>Select a Protocol to Compile</h3>
@@ -1019,6 +1108,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 )}
                 <GameBoard
                   gameState={visualGameState}
+                  compact={isCompact}
                   onLanePointerDown={handleLanePointerDown}
                   onPlayFaceDown={handlePlayFaceDown}
                   selectedCardId={isAnimating ? null : selectedCard}
@@ -1045,25 +1135,22 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 />
                 
                 <div className="player-action-area">
-                  <PhaseController
-                    gameState={gameState}
-                    onFillHand={fillHand}
-                    onSkipAction={skipAction}
-                    onResolveOptionalDrawPrompt={resolveOptionalDrawPrompt}
-                    onResolveOptionalDiscardCustomPrompt={resolveOptionalDiscardCustomPrompt}
-                    onResolveOptionalEffectPrompt={resolveOptionalEffectPrompt}
-                    onResolveVariableDiscard={resolveVariableDiscard}
-                    onResolveRevealBoardCardPrompt={resolveRevealBoardCardPrompt}
-                    onResolveControlMechanicPrompt={resolveControlMechanicPrompt}
-                    onResolveCustomChoice={resolveCustomChoice}
-                    selectedCardId={selectedCard}
-                    multiSelectedCardIds={multiSelectedCardIds}
-                    actionRequiredClass={actionRequiredClass}
-                    isAnimating={isAnimating}
-                    snapshotTurn={visualGameState.turn}
-                    snapshotPhase={visualGameState.phase}
-                  />
-                  <div className={`player-hand-area ${isAnimating ? '' : handBackgroundClass}`}>
+                  {mode === 'tutorial' && (
+                    <CoachHints gameState={gameState} selectedCardId={selectedCard} isAnimating={isAnimating || showCoinFlip} />
+                  )}
+                  {isCompact ? (
+                    <div className="mobile-controls-row">
+                      <div className="mobile-player-piles">
+                        <MiniPile owner="player" kind="deck" count={visualGameState.player.deck.length} warn={mode === 'solo' && visualGameState.player.deck.length <= SOLO_LOW_DECK_WARNING} onClick={() => setDebugModalPlayer('player')} />
+                        <MiniPile owner="player" kind="trash" count={visualGameState.player.discard.length} onClick={() => setDebugModalPlayer('player')} />
+                      </div>
+                      {phaseController}
+                    </div>
+                  ) : phaseController}
+                  <div
+                    className={`player-hand-area ${isAnimating ? '' : handBackgroundClass}`}
+                    style={{ '--hand-count': visualGameState.player.hand.length } as React.CSSProperties}
+                  >
                     {(() => {
                       // DEFENSIVE: Deduplicate hand cards to prevent React key errors
                       // This handles edge cases where snapshot hand might contain duplicate IDs
@@ -1128,6 +1215,12 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
             </div>
         </div>
         {showCoinFlip && <CoinFlipModal onComplete={handleCoinFlipComplete} />}
+        {isPhoneLandscape && (
+            <div className="rotate-overlay">
+                <div className="rotate-icon">⟲</div>
+                <p>Turn your phone upright.<br />The board is laid out for portrait.</p>
+            </div>
+        )}
         {showDebugButton && <DebugPanel onLoadScenario={setupTestScenario} onSkipCoinFlip={handleSkipCoinFlip} onForceWin={handleForceWin} onForceLose={handleForceLose} />}
 
         {/* Animation Overlay - renders above game during animation queue playback */}

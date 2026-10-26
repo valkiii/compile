@@ -12,12 +12,17 @@ import { CardLibraryScreen } from './screens/CardLibraryScreen';
 import { StatisticsScreen } from './screens/StatisticsScreen';
 import { CustomProtocolCreator } from './screens/CustomProtocolCreator';
 import { RulesScreen } from './screens/RulesScreen';
+import { TutorialScreen } from './screens/TutorialScreen';
 import { CoinFlipModal } from './components/CoinFlipModal';
-import { Difficulty, GameState } from './types';
+import { Difficulty, GameMode, GameState } from './types';
 import { loadDefaultCustomProtocols } from './logic/customProtocols/loadDefaultProtocols';
 import * as testScenarios from './utils/testScenarios';
 
-type Screen = 'MainMenu' | 'ProtocolSelection' | 'GameScreen' | 'ResultsScreen' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules';
+type Screen = 'MainMenu' | 'ProtocolSelection' | 'GameScreen' | 'ResultsScreen' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules' | 'Tutorial';
+
+// Simple, low-interaction protocols for the guided first game
+const TUTORIAL_PLAYER_PROTOCOLS = ['Life', 'Light', 'Fire'];
+const TUTORIAL_OPPONENT_PROTOCOLS = ['Water', 'Metal', 'Death'];
 export type Player = 'player' | 'opponent';
 
 export function App() {
@@ -26,6 +31,8 @@ export function App() {
   const [opponentProtocols, setOpponentProtocols] = useState<string[]>([]);
   const [winner, setWinner] = useState<Player | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
+  const [gameMode, setGameMode] = useState<GameMode>('standard');
+  const [lossReason, setLossReason] = useState<string | null>(null);
   const [finalGameState, setFinalGameState] = useState<GameState | null>(null);
   const [useControl, setUseControl] = useState(true);
   const [startingPlayer, setStartingPlayer] = useState<Player>('player');
@@ -100,6 +107,19 @@ export function App() {
     setOpponentProtocols([]);
     setWinner(null);
     setFinalGameState(null);
+    setLossReason(null);
+    setGameMode(mode => mode === 'tutorial' ? 'standard' : mode);
+  }, []);
+
+  const startTutorialGame = useCallback(() => {
+    setGameMode('tutorial');
+    setDifficulty('easy');
+    setPlayerProtocols(TUTORIAL_PLAYER_PROTOCOLS);
+    setOpponentProtocols(TUTORIAL_OPPONENT_PROTOCOLS);
+    setWinner(null);
+    setFinalGameState(null);
+    setLossReason(null);
+    setScreen('GameScreen');
   }, []);
 
   useEffect(() => {
@@ -124,8 +144,9 @@ export function App() {
     setScreen('GameScreen'); // Go directly to game, coin flip will show as overlay
   }, []);
 
-  const handleEndGame = useCallback((winner: Player, finalState: GameState) => {
+  const handleEndGame = useCallback((winner: Player, finalState: GameState, reason?: string) => {
     setWinner(winner);
+    setLossReason(reason ?? null);
     setFinalGameState(finalState);
     setScreen('ResultsScreen');
   }, []);
@@ -140,11 +161,14 @@ export function App() {
             setDifficulty={setDifficulty}
             useControl={useControl}
             onUseControlChange={setUseControl}
+            gameMode={gameMode}
+            setGameMode={setGameMode}
           />
         );
       case 'ProtocolSelection':
         return (
           <ProtocolSelection
+            mode={gameMode}
             onBack={handleBackToMenu}
             onStartGame={startGame}
           />
@@ -158,12 +182,13 @@ export function App() {
             opponentProtocols={opponentProtocols}
             difficulty={difficulty}
             useControlMechanic={useControl}
+            mode={gameMode}
             startingPlayer={startingPlayer}
             initialScenarioSetup={initialScenarioSetup}
           />
         );
       case 'ResultsScreen':
-        return <ResultsScreen onPlayAgain={handleBackToMenu} winner={winner} finalState={finalGameState} difficulty={difficulty} />;
+        return <ResultsScreen onPlayAgain={handleBackToMenu} winner={winner} finalState={finalGameState} difficulty={difficulty} mode={gameMode} lossReason={lossReason} />;
       case 'CardLibrary':
         return <CardLibraryScreen onBack={handleBackToMenu} />;
       case 'Statistics':
@@ -172,8 +197,10 @@ export function App() {
         return <CustomProtocolCreator onBack={handleBackToMenu} />;
       case 'Rules':
         return <RulesScreen onBack={handleBackToMenu} />;
+      case 'Tutorial':
+        return <TutorialScreen onBack={handleBackToMenu} onStartTutorialGame={startTutorialGame} />;
       default:
-        return <MainMenu onNavigate={(target) => setScreen(target)} difficulty={difficulty} setDifficulty={setDifficulty} useControl={useControl} onUseControlChange={setUseControl} />;
+        return <MainMenu onNavigate={(target) => setScreen(target)} difficulty={difficulty} setDifficulty={setDifficulty} useControl={useControl} onUseControlChange={setUseControl} gameMode={gameMode} setGameMode={setGameMode} />;
     }
   };
 

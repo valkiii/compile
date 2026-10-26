@@ -5,16 +5,18 @@
 
 import React from 'react';
 import { Player } from '../App';
-import { Difficulty, GameState } from '../types';
+import { Difficulty, GameMode, GameState } from '../types';
 
 interface ResultsScreenProps {
   onPlayAgain: () => void;
   winner: Player | null;
   finalState: GameState | null;
   difficulty: Difficulty;
+  mode?: GameMode;
+  lossReason?: string | null;
 }
 
-export function ResultsScreen({ onPlayAgain, winner, finalState, difficulty }: ResultsScreenProps) {
+export function ResultsScreen({ onPlayAgain, winner, finalState, difficulty, mode = 'standard', lossReason }: ResultsScreenProps) {
   if (!finalState) {
     return (
       <div className="screen">
@@ -38,7 +40,15 @@ export function ResultsScreen({ onPlayAgain, winner, finalState, difficulty }: R
       <div className="results-screen-content">
         <header className="results-header">
             <h1>{hasWon ? 'VICTORY' : 'DEFEAT'}</h1>
-            <p>{hasWon ? 'System compiled successfully.' : 'Critical error in the mainframe.'}</p>
+            <p>{hasWon ? 'System compiled successfully.' : (lossReason || 'Critical error in the mainframe.')}</p>
+            {mode === 'solo' && (
+              <p className="results-mode-note">
+                Solo Deck Run{hasWon ? ` cleared with ${finalState.player.deck.length} card${finalState.player.deck.length === 1 ? '' : 's'} left in your deck.` : '.'}
+              </p>
+            )}
+            {mode === 'tutorial' && (
+              <p className="results-mode-note">Tutorial game complete. Next: try a real draft from the main menu.</p>
+            )}
         </header>
 
         <div className="results-body">

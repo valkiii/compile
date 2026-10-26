@@ -188,6 +188,7 @@
 
 
 .lane-stack {
+    --stack-offset: 64px; /* vertical distance between stacked cards (read by AnimatedCard) */
     position: relative;
     width: 100%;
     height: 100%;
@@ -232,7 +233,7 @@
 /* Lane-specific positioning */
 .lane-stack .card-component {
     position: absolute;
-    top: calc(var(--i) * 64px);
+    top: calc(var(--i) * var(--stack-offset));
     transition: all 0.2s ease-in-out;
     cursor: pointer;
 }

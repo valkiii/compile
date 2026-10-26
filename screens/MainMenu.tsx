@@ -7,18 +7,24 @@ import React, { useState, useEffect } from 'react';
 import { CardComponent } from '../components/Card';
 import { cards, Card as CardData } from '../data/cards';
 import { shuffleDeck } from '../utils/gameLogic';
-import { Difficulty } from '../types';
+import { Difficulty, GameMode } from '../types';
 import { isCustomProtocolEnabled, setCustomProtocolEnabled } from '../utils/customProtocolSettings';
+import { hasSeenTutorial } from '../utils/tutorialProgress';
 
 interface MainMenuProps {
-  onNavigate: (screen: 'ProtocolSelection' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules') => void;
+  onNavigate: (screen: 'ProtocolSelection' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules' | 'Tutorial') => void;
   difficulty: Difficulty;
   setDifficulty: (difficulty: Difficulty) => void;
   useControl: boolean;
   onUseControlChange: (enabled: boolean) => void;
+  gameMode: GameMode;
+  setGameMode: (mode: GameMode) => void;
 }
 
-export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, onUseControlChange }: MainMenuProps) {
+
+export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, onUseControlChange, gameMode, setGameMode }: MainMenuProps) {
+  const [showTutorialNudge] = useState(() => !hasSeenTutorial());
+  const isSolo = gameMode === 'solo';
   const [decorativeCardRight, setDecorativeCardRight] = useState<CardData | null>(null);
   const [previewCard, setPreviewCard] = useState<CardData | null>(null);
   const [initialPreviewCard, setInitialPreviewCard] = useState<CardData | null>(null);
@@ -83,6 +89,24 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
 
         <div className="main-menu-actions-container">
           <div className="main-menu-start-group">
+            {showTutorialNudge && (
+              <button className="tutorial-nudge" onClick={() => onNavigate('Tutorial')}>
+                <span className="tutorial-nudge-title">New to Compile?</span>
+                <span>Take the 2-minute tutorial →</span>
+              </button>
+            )}
+            <div className="difficulty-selector mode-selector">
+              <h3 className="difficulty-title">Mode</h3>
+              <div className="difficulty-options">
+                <button className={`btn ${!isSolo ? 'active' : ''}`} onClick={() => setGameMode('standard')}>Versus AI</button>
+                <button className={`btn ${isSolo ? 'active' : ''}`} onClick={() => setGameMode('solo')}>Solo Deck Run</button>
+              </div>
+              <p className="mode-description">
+                {isSolo
+                  ? 'Pick any 3 protocols, the AI gets 3 random ones. Your deck is never reshuffled: compile all 3 before it runs dry.'
+                  : 'Draft protocols against the AI (1-2-2-1). First to compile all 3 protocols wins.'}
+              </p>
+            </div>
             <div className="difficulty-selector">
               <h3 className="difficulty-title">Difficulty</h3>
               <div className="difficulty-options">
@@ -101,10 +125,13 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
                 <label htmlFor="control-mechanic">Use Control Mechanic</label>
             </div>
             <button className="btn btn-start" onClick={() => onNavigate('ProtocolSelection')}>
-              Start Game
+              {isSolo ? 'Start Solo Run' : 'Start Game'}
             </button>
           </div>
           <div className="main-menu-other-actions">
+            <button className="btn" onClick={() => onNavigate('Tutorial')}>
+              Tutorial
+            </button>
             <button className="btn" onClick={() => onNavigate('CardLibrary')}>
               Cards
             </button>

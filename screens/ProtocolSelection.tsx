@@ -13,21 +13,33 @@ import { isSystemProtocol } from './CustomProtocolCreator/ProtocolList';
 import { invalidateCardCache } from '../utils/gameLogic';
 import { isCustomProtocolEnabled } from '../utils/customProtocolSettings';
 import '../styles/layouts/protocol-selection.css';
+import { GameMode } from '../types';
+import { SOLO_PROTOCOL_PICKS } from '../logic/game/soloMode';
+import { useIsCompact } from '../hooks/useIsCompact';
 
 
 interface ProtocolSelectionProps {
+  mode?: GameMode;
   onBack: () => void;
   onStartGame: (playerProtocols: string[], opponentProtocols: string[]) => void;
 }
 
-const SELECTION_STEPS = [
+const DRAFT_STEPS = [
     { player: 'Player', picks: 1 },
     { player: 'Opponent', picks: 2 },
     { player: 'Player', picks: 2 },
     { player: 'Opponent', picks: 1 },
 ];
 
-export function ProtocolSelection({ onBack, onStartGame }: ProtocolSelectionProps) {
+// Solo Deck Run: you choose freely, the opponent's protocols are random
+const SOLO_STEPS = [
+    { player: 'Player', picks: SOLO_PROTOCOL_PICKS },
+    { player: 'Opponent', picks: SOLO_PROTOCOL_PICKS },
+];
+
+export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: ProtocolSelectionProps) {
+  const SELECTION_STEPS = mode === 'solo' ? SOLO_STEPS : DRAFT_STEPS;
+  const isCompact = useIsCompact();
   const [step, setStep] = useState(0);
   const [playerProtocols, setPlayerProtocols] = useState<string[]>([]);
   const [opponentProtocols, setOpponentProtocols] = useState<string[]>([]);
@@ -295,7 +307,7 @@ export function ProtocolSelection({ onBack, onStartGame }: ProtocolSelectionProp
   };
 
   const getStatusMessage = () => {
-      if (isAnimating && isOpponentTurn) return "Opponent is selecting protocols...";
+      if (isAnimating && isOpponentTurn) return mode === 'solo' ? "Rolling 3 random protocols for the opponent..." : "Opponent is selecting protocols...";
       if (currentStepInfo?.player === 'Player') {
           return `Player, select ${currentStepInfo.picks} protocol(s). (${currentSelection.length}/${currentStepInfo.picks})`;
       }
@@ -307,7 +319,7 @@ export function ProtocolSelection({ onBack, onStartGame }: ProtocolSelectionProp
 
   return (
     <div className="screen protocol-selection-screen">
-      <Header title="Protocol Selection" onBack={onBack} />
+      <Header title={mode === 'solo' ? 'Solo Run: Pick 3' : 'Protocol Selection'} onBack={onBack} />
       <div className="protocol-selection-layout">
         <div className="protocol-selection-sidebar">
           <div className="player-protocols-area">
@@ -405,7 +417,24 @@ export function ProtocolSelection({ onBack, onStartGame }: ProtocolSelectionProp
       </div>
 
       <div className="selected-protocol-cards-container">
-        {selectedProtocolsWithCards.length > 0 && [...selectedProtocolsWithCards].reverse().map(proto => (
+        {isCompact && selectedProtocolsWithCards.length > 0 && [...selectedProtocolsWithCards].reverse().map(proto => (
+            // Phone: card art is too small to read, so list each card's commands as text
+            <div key={proto.name} className="protocol-text-list" style={getProtocolStyle(proto.name)}>
+              <h4>{proto.name}</h4>
+              {proto.cards.map(card => (
+                <div key={`${proto.name}-${card.value}`} className="protocol-text-row">
+                  <span className="protocol-text-value">{card.value}</span>
+                  <div className="protocol-text-commands">
+                    {[card.top, card.middle, card.bottom].filter(Boolean).map((text, i) => (
+                      <span key={i} dangerouslySetInnerHTML={{ __html: text }} />
+                    ))}
+                    {!card.top && !card.middle && !card.bottom && <span className="muted">No commands</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+        ))}
+        {!isCompact && selectedProtocolsWithCards.length > 0 && [...selectedProtocolsWithCards].reverse().map(proto => (
             <div key={proto.name} className="protocol-card-row">
               {proto.cards.map(card => (
                 <CardComponent

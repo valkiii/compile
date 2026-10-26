@@ -1,0 +1,387 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Tutorial walkthrough, in-game coach hints, main-menu mode selector.
+ */
+
+/* --- Main menu additions --- */
+.mode-description {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    min-height: 3.3em;
+    margin: 0;
+}
+
+.tutorial-nudge {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: 1px dashed var(--primary-color);
+    background: hsla(188, 100%, 69%, 0.08);
+    color: var(--text-color);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: center;
+}
+
+.tutorial-nudge-title {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--primary-color);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+/* Desktop already shows a Tutorial button and has little vertical room in the menu */
+@media (min-width: 641px) {
+    .tutorial-nudge {
+        display: none;
+    }
+}
+
+.results-mode-note {
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+/* --- Tutorial screen --- */
+.tutorial-screen {
+    justify-content: flex-start;
+    max-width: 760px;
+}
+
+.tutorial-slides {
+    width: 100%;
+    max-width: 680px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.tutorial-progress {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+}
+
+.tutorial-dot {
+    flex: 1;
+    max-width: 40px;
+    height: 6px;
+    border-radius: 3px;
+    border: none;
+    background: var(--surface-hover);
+    cursor: pointer;
+    padding: 0;
+}
+
+.tutorial-dot.done { background: var(--secondary-color); }
+.tutorial-dot.active { background: var(--primary-color); box-shadow: 0 0 8px var(--primary-color); }
+
+.tutorial-slide {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    animation: fadeIn 0.25s ease-out;
+}
+
+.tutorial-step {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    color: var(--secondary-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.tutorial-slide h2 {
+    color: var(--primary-color);
+}
+
+.tutorial-visual {
+    display: flex;
+    justify-content: center;
+}
+
+.tutorial-body {
+    color: var(--text-color);
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+.tutorial-body b { color: var(--primary-color); font-weight: 600; }
+.tutorial-body ul, .tutorial-body ol { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.4rem; }
+
+.tut-keywords {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+}
+
+.tut-keywords dt {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 0.85rem;
+}
+
+.tutorial-nav {
+    display: flex;
+    gap: 0.75rem;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.tutorial-nav .btn { flex: 1; }
+
+.tutorial-nav .btn-start,
+.help-modal .tutorial-nav .btn-start {
+    background: var(--primary-color);
+    color: var(--background-color);
+}
+
+/* Mini board illustrations */
+.tut-board {
+    width: 100%;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tut-lanes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.tut-lane {
+    height: 84px;
+    border: 1px solid var(--surface-hover);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    padding-top: 4px;
+}
+
+.tut-lanes.opponent .tut-lane {
+    align-items: flex-end;
+    padding: 0 0 4px;
+}
+
+.tut-lane.highlight {
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 0 12px var(--primary-color);
+}
+
+.tut-stack {
+    position: relative;
+    width: 52px;
+    height: 72px;
+}
+
+.tut-card {
+    position: absolute;
+    left: 0;
+    width: 52px;
+    height: 72px;
+    border-radius: 5px;
+    border: 1px solid var(--secondary-color);
+    background: var(--surface-color);
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 4px;
+    font-size: 0.55rem;
+    font-weight: 600;
+    top: calc(var(--i) * 12px);
+}
+
+.tut-stack.opponent .tut-card {
+    top: auto;
+    bottom: calc(var(--i) * 12px);
+    border-color: var(--danger-color);
+}
+
+.tut-card.uncovered {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 6px hsla(188, 100%, 69%, 0.5);
+}
+
+.tut-card.face-down {
+    background-image: repeating-linear-gradient(-45deg, rgba(0,0,0,0.2), rgba(0,0,0,0.2) 4px, rgba(138,121,232,0.15) 4px, rgba(138,121,232,0.15) 6px);
+    justify-content: flex-end;
+}
+
+.tut-card-value {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--primary-color);
+    font-size: 0.8rem;
+}
+
+.tut-protocols {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-top: 1px solid var(--surface-hover);
+    border-bottom: 1px solid var(--surface-hover);
+    padding: 3px 0;
+}
+
+.tut-proto-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.tut-proto-row span {
+    display: flex;
+    justify-content: space-between;
+    padding: 1px 6px;
+    border-radius: 3px;
+}
+
+.tut-proto-row.opponent { color: var(--danger-color); }
+.tut-proto-row.player { color: var(--primary-color); }
+.tut-proto-row b { font-family: 'Orbitron', sans-serif; color: var(--text-color); }
+.tut-proto-row span.highlight { outline: 1px solid var(--primary-color); box-shadow: 0 0 8px var(--primary-color); }
+.tut-proto-row span.compiled { background: hsla(188, 100%, 69%, 0.2); text-shadow: 0 0 5px var(--primary-color); }
+.tut-proto-row span.compiled::after { content: '✓'; margin-left: 4px; }
+
+.tut-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.tut-or, .tut-note {
+    color: var(--secondary-color);
+    font-size: 0.8rem;
+}
+
+.tut-coin {
+    animation: none;
+}
+
+.tut-anatomy {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.tut-anatomy-card .card-component {
+    width: 170px;
+    height: 238px;
+    font-size: 0.68rem;
+}
+
+.tut-anatomy-legend {
+    flex: 1;
+    min-width: 200px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--text-color);
+}
+
+.tut-anatomy-legend b {
+    display: block;
+    color: var(--primary-color);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+}
+
+/* In-game help modal */
+.help-modal {
+    width: min(720px, 94vw);
+    height: min(760px, 88dvh);
+    display: flex;
+}
+
+/* --- Coach hints (guided game) --- */
+.coach-hint {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(520px, 100%);
+    margin-bottom: 8px;
+    z-index: 60;
+    background: var(--surface-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 10px;
+    padding: 8px 10px 8px 12px;
+    box-shadow: 0 0 18px hsla(188, 100%, 69%, 0.35), 0 8px 24px rgba(0, 0, 0, 0.6);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "title btn" "text btn";
+    gap: 2px 10px;
+    animation: fadeIn 0.25s ease-out;
+}
+
+.coach-hint-title {
+    grid-area: title;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.68rem;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.coach-hint-text {
+    grid-area: text;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    color: var(--text-color);
+}
+
+.coach-hint-dismiss {
+    grid-area: btn;
+    align-self: center;
+    border: 1px solid var(--primary-color);
+    background: transparent;
+    color: var(--primary-color);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    font-family: inherit;
+    cursor: pointer;
+    min-height: 36px;
+}
+
+@media (max-width: 640px) {
+    .tutorial-screen {
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    }
+
+    .tutorial-body {
+        font-size: 0.9rem;
+    }
+
+    .tut-anatomy-card .card-component {
+        width: 150px;
+        height: 210px;
+        font-size: 0.6rem;
+    }
+
+    .help-modal {
+        height: 88dvh;
+    }
+}

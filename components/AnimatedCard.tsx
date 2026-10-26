@@ -302,14 +302,9 @@ function getCardDimensions(): { width: number; height: number; stackOffset: numb
         const style = window.getComputedStyle(existingCard);
         const width = parseFloat(style.width) || 100;
         const height = parseFloat(style.height) || 140;
-        // Stack offset is the 'top' value divided by the card index
-        // We can get it from CSS variable or default to calculated value
-        const top = parseFloat(style.top) || 0;
-        // Default offset based on screen size
-        const screenWidth = window.innerWidth;
-        let stackOffset = 64; // default
-        if (screenWidth <= 1024) stackOffset = 50; // tablet
-        if (screenWidth <= 768) stackOffset = 42; // small tablet
+        // Stack offset comes from the --stack-offset CSS variable used by the lane layout
+        const cssOffset = parseFloat(style.getPropertyValue('--stack-offset'));
+        const stackOffset = Number.isFinite(cssOffset) ? cssOffset : height * 0.21; // phone: offset is a calc() of the card height
         return { width, height, stackOffset };
     }
 
@@ -395,7 +390,12 @@ function getDOMPosition(position: CardPosition): DOMRect | null {
                             const lastCardRect = lastCard.getBoundingClientRect();
                             const isOpponent = position.owner === 'opponent';
                             const offsetDirection = isOpponent ? -1 : 1;
-                            const newTop = lastCardRect.top + (offsetDirection * dims.stackOffset);
+                            // Stacks can be squeezed on small screens: use the real spacing when there is one
+                            const realOffset = cards.length > 1
+                                ? Math.abs(lastCardRect.top - cards[cards.length - 2].getBoundingClientRect().top)
+                                : 0;
+                            const offset = realOffset > 0 ? Math.min(realOffset, dims.stackOffset) : dims.stackOffset;
+                            const newTop = lastCardRect.top + (offsetDirection * offset);
                             return new DOMRect(centerX, newTop, dims.width, dims.height);
                         }
 

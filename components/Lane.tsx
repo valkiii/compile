@@ -27,9 +27,10 @@ interface LaneProps {
     gameState: GameState;
     animatingCardIds?: Set<string>;  // Card IDs being animated (should be hidden)
     animatingCardInfo?: { cardId: string; fromPosition: CardPosition } | null;  // Extended info for shift animation hiding
+    compact?: boolean;
 }
 
-export const Lane: React.FC<LaneProps> = ({ cards, isPlayable, isCompilable, isShiftTarget, isEffectTarget, isMatching, onLanePointerDown, onPlayFaceDown, onCardPointerDown, onCardPointerEnter, onCardPointerLeave, owner, isCardTargetable, laneIndex, sourceCardId, gameState, animatingCardIds, animatingCardInfo }) => {
+export const Lane: React.FC<LaneProps> = ({ cards, isPlayable, isCompilable, isShiftTarget, isEffectTarget, isMatching, onLanePointerDown, onPlayFaceDown, onCardPointerDown, onCardPointerEnter, onCardPointerLeave, owner, isCardTargetable, laneIndex, sourceCardId, gameState, animatingCardIds, animatingCardInfo, compact }) => {
 
     const laneClasses = ['lane'];
     if (isPlayable) laneClasses.push('playable');
@@ -51,10 +52,10 @@ export const Lane: React.FC<LaneProps> = ({ cards, isPlayable, isCompilable, isS
                         onPlayFaceDown();
                     }}
                 >
-                    Play Face-Down
+                    {compact ? 'Face-down' : 'Play Face-Down'}
                 </button>
             )}
-            <div className="lane-stack">
+            <div className="lane-stack" style={{ '--n': cards.length } as React.CSSProperties}>
                 {(() => {
                     // DEFENSIVE: Deduplicate lane cards to prevent React key errors
                     const seenIds = new Set<string>();

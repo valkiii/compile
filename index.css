@@ -1808,7 +1808,7 @@
   .lane-stack .card-component {
     width: 85px; /* Reduced from 100px */
     height: 119px; /* Reduced from 140px */
-    top: calc(var(--i) * 50px); /* Reduced overlap from 64px */
+    --stack-offset: 50px; /* Reduced overlap from 64px */
   }
 
   .btn.btn-play-facedown {
@@ -2086,7 +2086,7 @@
   .lane-stack .card-component {
     width: 70px; /* Further reduced */
     height: 98px;
-    top: calc(var(--i) * 42px); /* Less overlap */
+    --stack-offset: 42px; /* Less overlap */
   }
 
   .btn.btn-play-facedown {
