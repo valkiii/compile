@@ -7,6 +7,7 @@ import React from "react";
 import { PlayedCard } from "../types";
 import { cardArtUrl } from "../data/cardArt";
 import { protocolColor } from "../utils/protocolColors";
+import { protocolStyle } from "../utils/protocolStyle";
 
 interface CardProps {
   card: PlayedCard;
@@ -82,7 +83,11 @@ export const CardComponent: React.FC<CardProps> = ({
   if (color) {
     classNames.push("has-custom-color");
   }
-  if (card.pattern) {
+  // Each protocol has its own motif + symbol so similar colours are still told apart
+  const identity = protocolStyle(card.protocol);
+  if (identity) {
+    classNames.push("has-motif", `motif-${identity.motif}`);
+  } else if (card.pattern) {
     classNames.push(`card-pattern-${card.pattern}`);
   }
   if (isSelected) classNames.push("selected");
@@ -96,6 +101,9 @@ export const CardComponent: React.FC<CardProps> = ({
   if (color) {
     // Set CSS variable without quotes for proper color parsing
     (customStyle as any)["--card-custom-color"] = color;
+  }
+  if (identity) {
+    (customStyle as any)["--card-accent"] = identity.accent;
   }
 
   const artUrl = cardArtUrl(card.protocol, card.value);
@@ -119,10 +127,12 @@ export const CardComponent: React.FC<CardProps> = ({
                 card.protocol.length <= 10 ? "short-protocol" : ""
               }`}
             >
+              {identity && <span className="card-glyph-inline" aria-hidden="true">{identity.glyph}</span>}
               {card.protocol.slice(0, 10)}
             </span>
             <span className="card-value">{card.value}</span>
           </div>
+          {identity && <span className="card-glyph-mark" aria-hidden="true">{identity.glyph}</span>}
           <div className="card-body">
             <RuleBox content={card.top} className="card-rule-top" />
             <RuleBox content={card.middle} className="card-rule-middle" />

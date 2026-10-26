@@ -8,6 +8,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./styles/card-art.css";
 import "./styles/card-colors.css";
+import "./styles/card-motifs.css";
 import "./styles/layouts/game-desktop.css";
 import "./styles/responsive/phone.css";
 
