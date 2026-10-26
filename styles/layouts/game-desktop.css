@@ -1,0 +1,145 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Desktop / tablet game screen: everything fits the window height. Cards scale with the
+ * height, tall stacks squeeze (size container + cqh), and the action bar + hand always sit
+ * at the bottom instead of being pushed off-screen on short windows (e.g. 1280x720).
+ */
+
+.screen.game-screen:not(.compact) {
+    --desk-card-h: clamp(84px, calc((100vh - 330px) / 3.3), 140px);
+    --desk-card-w: calc(var(--desk-card-h) / 1.4);
+    height: 100vh;
+    overflow: hidden;
+}
+
+.game-screen:not(.compact) .game-screen-layout {
+    height: 100%;
+    min-height: 0;
+}
+
+.game-screen:not(.compact) .game-preview-container {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.game-screen:not(.compact) .game-main-area {
+    min-height: 0;
+    height: 100%;
+}
+
+.game-screen:not(.compact) .game-board {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.game-screen:not(.compact) .player-side {
+    height: auto;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.game-screen:not(.compact) .lanes {
+    min-height: 0;
+    padding: 0.5rem 0;
+}
+
+.game-screen:not(.compact) .lane-stack {
+    --stack-offset: calc(var(--desk-card-h) * 0.457);
+    container-type: size;
+}
+
+.game-screen:not(.compact) .lane-stack .card-component {
+    width: var(--desk-card-w);
+    height: var(--desk-card-h);
+    top: calc(var(--i) * min(var(--stack-offset), (100cqh - var(--desk-card-h)) / max(var(--n, 1) - 1, 1)));
+}
+
+.game-screen:not(.compact) .opponent-side .lane-stack .card-component {
+    top: auto;
+    bottom: calc((var(--n, 1) - 1 - var(--i)) * min(var(--stack-offset), (100cqh - var(--desk-card-h)) / max(var(--n, 1) - 1, 1)));
+}
+
+/* Deck / trash piles follow the card size */
+.game-screen:not(.compact) .deck-trash-area {
+    overflow: hidden;
+    min-height: 0;
+}
+
+.game-screen:not(.compact) .deck-trash-area {
+    --pile-h: calc(var(--desk-card-h) * 0.62);
+    --pile-w: calc(var(--desk-card-w) * 0.62);
+    gap: 4px;
+    padding: 4px 8px;
+}
+
+.game-screen:not(.compact) .deck-pile,
+.game-screen:not(.compact) .trash-pile {
+    padding: 2px;
+}
+
+.game-screen:not(.compact) .pile-label {
+    margin-bottom: 2px;
+}
+
+.game-screen:not(.compact) .pile-count {
+    margin-top: 2px;
+}
+
+.game-screen:not(.compact) .pile-card-wrapper {
+    width: var(--pile-h);
+    height: var(--pile-w);
+}
+
+.game-screen:not(.compact) .pile-card-wrapper .card-component,
+.game-screen:not(.compact) .empty-pile {
+    width: var(--pile-w);
+    height: var(--pile-h);
+}
+
+/* Action bar + hand: in the flow at the bottom, always fully visible */
+.game-screen:not(.compact) .player-action-area {
+    flex-shrink: 0;
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.game-screen:not(.compact) .player-hand-area,
+.game-screen:not(.compact) .player-hand-area.hand-in-background {
+    position: relative;
+    bottom: auto;
+    order: -1;
+    height: calc(var(--desk-card-h) + 14px);
+    padding: 10px 0 4px;
+    gap: 6px;
+    align-items: flex-end;
+    pointer-events: auto;
+}
+
+.game-screen:not(.compact) .player-hand-area .card-component.in-hand {
+    width: var(--desk-card-w);
+    height: var(--desk-card-h);
+    flex-shrink: 0;
+}
+
+.game-screen:not(.compact) .player-hand-area .card-component.in-hand:hover,
+.game-screen:not(.compact) .player-hand-area .card-component.selected {
+    transform: translateY(-8px);
+}
+
+.game-screen:not(.compact) .player-hand-area.hand-in-background .card-component.in-hand {
+    opacity: 0.55;
+}
+
+.game-screen:not(.compact) .phase-controller {
+    padding: 0.4rem 1rem;
+}
+
+/* Short windows: the deck/trash counts are enough, drop the labels */
+@media (max-height: 820px) {
+    .game-screen:not(.compact) .pile-label {
+        display: none;
+    }
+}

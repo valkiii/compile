@@ -45,6 +45,8 @@ import { OnlineGameSetup, isOnlineMessage } from '../multiplayer/messages';
 import { useGuestGame } from '../multiplayer/useGuestGame';
 import { OnlineStatusBar } from '../components/OnlineStatusBar';
 import type { CoinToss } from './ProtocolSelection';
+import { playSound, soundForAnimation, unlockAudio } from '../utils/sound';
+import { SoundToggle } from '../components/SoundToggle';
 import '../styles/layouts/tutorial.css';
 
 const SOLO_DECK_OUT_REASON = 'Your deck ran dry. In a Solo Deck Run your trash is never reshuffled.';
@@ -569,6 +571,19 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
       setHoveredCard(null);
     }
   }, [isCompact, gameState.log.length]);
+
+  // Sound effects follow the animation queue (so an online guest hears the host's moves too)
+  useEffect(() => {
+    const sound = currentAnimation ? soundForAnimation(currentAnimation.type) : null;
+    if (sound) playSound(sound);
+  }, [currentAnimation?.id]);
+
+  // iOS only plays audio after a user gesture
+  useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener('pointerdown', unlock);
+    return () => window.removeEventListener('pointerdown', unlock);
+  }, []);
 
   // NEW TOAST SYSTEM: Synchronized with animations
   // Effect 1: Show toast when animation with logMessage starts
@@ -1167,6 +1182,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 <div className="preview-card-area">
                     {renderPreview()}
                 </div>
+                <SoundToggle className="btn btn-back" withLabel />
                 <button className="btn btn-back" onClick={() => setShowHelp(true)}>
                     How to play
                 </button>

@@ -35,6 +35,12 @@
     cursor: pointer;
 }
 
+.hud-btn.hud-sound {
+    min-width: 32px;
+    padding: 0 4px;
+    font-size: 0.85rem;
+}
+
 .hud-btn.hud-quit {
     color: var(--secondary-color);
 }
@@ -1059,4 +1065,9 @@
     .hud-opponent-name {
         display: none;
     }
+}
+
+/* Top bar is tight: the opponent's piles show icon + number only */
+.hud-opponent .mini-pile-label {
+    display: none;
 }

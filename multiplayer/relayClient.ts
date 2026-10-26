@@ -46,6 +46,11 @@ export function relayUrl(role: Role): string {
     return role === 'host' ? PRIVATE_RELAY_URL : PUBLIC_RELAY_URL;
 }
 
+/** HTTP(S) base of the relay door a player uses (for files the relay serves, e.g. card art). */
+export function relayHttpBase(role: Role): string {
+    return relayUrl(role).replace(/^ws(s?):/, 'http$1:').replace(/\/$/, '');
+}
+
 /** The owner key lets this device open rooms. Set once by opening the site with ?owner=KEY. */
 export function getOwnerKey(): string | null {
     try {

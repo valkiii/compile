@@ -15,7 +15,8 @@ import { RulesScreen } from './screens/RulesScreen';
 import { TutorialScreen } from './screens/TutorialScreen';
 import { OnlineLobby } from './screens/OnlineLobby';
 import { OnlineDraft } from './screens/OnlineDraft';
-import { RelayClient, Role, loadSavedSession, setOwnerKey } from './multiplayer/relayClient';
+import { RelayClient, Role, loadSavedSession, setOwnerKey, relayHttpBase } from './multiplayer/relayClient';
+import { setCardArtSource } from './data/cardArt';
 import { takeFragmentParams } from './multiplayer/invite';
 import { OnlineGameSetup, isOnlineMessage } from './multiplayer/messages';
 import { clearHostGame, loadHostGame, saveHostGame } from './multiplayer/savedGame';
@@ -65,6 +66,7 @@ export function App() {
     if (fragment.ownerKey) {
       setOwnerKey(fragment.ownerKey);
       setOwnerNotice(true);
+      setTimeout(() => setOwnerNotice(false), 6000);
     }
     // Invite links open the lobby straight away
     if (fragment.invite) setScreen('OnlineLobby');
@@ -373,6 +375,11 @@ export function App() {
   };
 
   const chatRoom = online?.client.session?.room;
+  // Card art comes from the relay and only for the players of the current online room
+  const session = online?.client.session;
+  setCardArtSource(online && session && (screen === 'OnlineDraft' || screen === 'GameScreen' || screen === 'ResultsScreen')
+    ? { base: relayHttpBase(online.role), room: session.room, token: session.token }
+    : null);
   const showChat = !!online && !!chatRoom && (screen === 'OnlineDraft' || screen === 'GameScreen' || screen === 'ResultsScreen');
 
   return (

@@ -304,7 +304,9 @@ function getCardDimensions(): { width: number; height: number; stackOffset: numb
         const height = parseFloat(style.height) || 140;
         // Stack offset comes from the --stack-offset CSS variable used by the lane layout
         const cssOffset = parseFloat(style.getPropertyValue('--stack-offset'));
-        const stackOffset = Number.isFinite(cssOffset) ? cssOffset : height * 0.21; // phone: offset is a calc() of the card height
+        // Phone/desktop layouts define the offset as a calc() of the card height
+        const ratio = document.querySelector('.game-screen.compact') ? 0.21 : 0.457;
+        const stackOffset = Number.isFinite(cssOffset) ? cssOffset : height * ratio;
         return { width, height, stackOffset };
     }
 

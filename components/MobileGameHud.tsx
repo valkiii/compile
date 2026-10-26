@@ -9,6 +9,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { GamePhase, Player, PlayerState } from '../types';
+import { SoundToggle } from './SoundToggle';
 
 const PHASE_LABELS: Record<GamePhase, string> = {
     start: 'Start',
@@ -75,6 +76,7 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({ opponent, opponentNa
                 <span className="hud-turn-who">{turn === 'player' ? 'You' : opponentName}</span>
                 <span className="hud-turn-phase">{PHASE_LABELS[phase] ?? phase}</span>
             </div>
+            <SoundToggle className="hud-btn hud-sound" />
             <button className="hud-btn" onClick={onShowLog} aria-label="Game log">Log</button>
             <button className="hud-btn" onClick={onShowHelp} aria-label="Quick rules">?</button>
         </div>

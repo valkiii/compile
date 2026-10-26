@@ -32,13 +32,20 @@ import secrets
 import time
 from collections import defaultdict, deque
 
+import re
+from urllib.parse import parse_qs, urlsplit
+
 import websockets
+from websockets.datastructures import Headers
+from websockets.http11 import Response
 
 HOST = os.environ.get("RELAY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("RELAY_PORT", "8795"))                  # public (Funnel): join only
 PRIVATE_PORT = int(os.environ.get("RELAY_PRIVATE_PORT", "8796"))  # tailnet only: may create rooms
 OWNER_KEY = os.environ.get("OWNER_KEY", "")
 STATE_FILE = os.environ.get("RELAY_STATE", "")
+ART_DIR = os.environ.get("RELAY_ART_DIR", "")   # card art, served only to players of a live room
+ART_NAME = re.compile(r"/art/([a-z]+-(?:[0-6]|tile)\.webp)$")
 ALLOWED_ORIGINS = {
     o.strip() for o in os.environ.get(
         "RELAY_ORIGINS",
@@ -112,10 +119,10 @@ def other(role):
     return "guest" if role == "host" else "host"
 
 
-def client_address(ws):
+def client_address(ws, request=None):
     # Behind Tailscale Funnel the proxy appends the real client address: trust the LAST entry
     # (earlier entries can be forged by the client)
-    forwarded = ws.request.headers.get("X-Forwarded-For", "")
+    forwarded = (request or ws.request).headers.get("X-Forwarded-For", "")
     parts = [p.strip() for p in forwarded.split(",") if p.strip()]
     return parts[-1] if parts else (ws.remote_address or ("?",))[0]
 
@@ -163,6 +170,42 @@ async def drop_if_silent(ws, state):
     await asyncio.sleep(HELLO_TIMEOUT)
     if state["room"] is None:
         await ws.close(code=4008, reason="timeout")
+
+
+def _http(status, reason, body=b"", content_type="text/plain", cache="no-store"):
+    headers = Headers([
+        ("Content-Type", content_type),
+        ("Content-Length", str(len(body))),
+        ("Cache-Control", cache),
+        ("X-Content-Type-Options", "nosniff"),
+        ("Cross-Origin-Resource-Policy", "cross-origin"),
+    ])
+    return Response(status, reason, headers, body)
+
+
+def serve_art(connection, request):
+    """GET .../art/<protocol>-<value>.webp?room=…&token=… for the two players of a live room.
+    Anything that isn't an art request continues as a normal WebSocket handshake."""
+    url = urlsplit(request.path)
+    m = ART_NAME.search(url.path)
+    if not m:
+        return None
+    addr = client_address(connection, request)
+    if not ART_DIR or rate_limited(addr):
+        return _http(404, "Not Found")
+    q = parse_qs(url.query)
+    room = rooms.get((q.get("room") or [""])[0].upper())
+    token = (q.get("token") or [""])[0].encode()
+    if room is None or not any(t and secrets.compare_digest(token, t.encode()) for t in room.tokens.values()):
+        record_failure(addr)
+        return _http(403, "Forbidden")
+    path = os.path.join(ART_DIR, m.group(1))  # name is whitelisted by the regex: no path tricks
+    try:
+        with open(path, "rb") as f:
+            body = f.read()
+    except OSError:
+        return _http(404, "Not Found")
+    return _http(200, "OK", body, "image/webp", "private, max-age=86400")
 
 
 async def public_handler(ws):
@@ -330,7 +373,7 @@ async def main():
         log.warning("OWNER_KEY is not set: nobody can create rooms")
     load_state()
     asyncio.create_task(reaper())
-    opts = dict(max_size=MAX_MESSAGE, ping_interval=20, ping_timeout=40)
+    opts = dict(max_size=MAX_MESSAGE, ping_interval=20, ping_timeout=40, process_request=serve_art)
     async with websockets.serve(public_handler, HOST, PORT, **opts), \
             websockets.serve(private_handler, HOST, PRIVATE_PORT, **opts):
         log.info("relay listening on %s:%d (public, join only) and %s:%d (tailnet, create)", HOST, PORT, HOST, PRIVATE_PORT)
