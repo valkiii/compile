@@ -42,6 +42,11 @@
     .tutorial-nudge {
         display: none;
     }
+
+    /* The mode selector made the menu taller: don't lift it into the credits line */
+    .main-menu-layout {
+        transform: none !important;
+    }
 }
 
 .results-mode-note {

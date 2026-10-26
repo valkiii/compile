@@ -14,9 +14,11 @@ interface ResultsScreenProps {
   difficulty: Difficulty;
   mode?: GameMode;
   lossReason?: string | null;
+  /** Online: play again in the same room */
+  onRematch?: () => void;
 }
 
-export function ResultsScreen({ onPlayAgain, winner, finalState, difficulty, mode = 'standard', lossReason }: ResultsScreenProps) {
+export function ResultsScreen({ onPlayAgain, winner, finalState, difficulty, mode = 'standard', lossReason, onRematch }: ResultsScreenProps) {
   if (!finalState) {
     return (
       <div className="screen">
@@ -54,7 +56,7 @@ export function ResultsScreen({ onPlayAgain, winner, finalState, difficulty, mod
         <div className="results-body">
             <div className="final-score-section">
                 <h3>Final Score</h3>
-                <h4 className="results-label results-opponent-label">Opponent ({difficulty.charAt(0).toUpperCase() + difficulty.slice(1)})</h4>
+                <h4 className="results-label results-opponent-label">{mode === 'online' ? 'Rival' : `Opponent (${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)})`}</h4>
                 <div className="protocol-bars-container">
                     <div className="protocol-bar opponent-bar">
                         {finalState.opponent.protocols.map((p, i) => 
@@ -113,9 +115,16 @@ export function ResultsScreen({ onPlayAgain, winner, finalState, difficulty, mod
             </div>
         </div>
         
-        <button className="btn" onClick={onPlayAgain}>
-            Play Again
-        </button>
+        {onRematch ? (
+          <div className="results-online-actions">
+            <button className="btn btn-start" onClick={onRematch}>Rematch</button>
+            <button className="btn" onClick={onPlayAgain}>Leave room</button>
+          </div>
+        ) : (
+          <button className="btn" onClick={onPlayAgain}>
+              Play Again
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,85 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Card illustrations (press-kit art) behind the card text.
+ */
+
+.card-front.has-art {
+    position: relative;
+    isolation: isolate;
+}
+
+.card-front .card-art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-size: cover;
+    background-position: center 35%;
+    border-radius: inherit;
+}
+
+/* Darken towards the text so commands stay readable on any artwork */
+.card-front .card-art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(10, 5, 26, 0.15) 0%, rgba(10, 5, 26, 0.35) 30%, rgba(10, 5, 26, 0.7) 100%);
+}
+
+.card-front.has-art .card-protocol,
+.card-front.has-art .card-value {
+    background: rgba(10, 5, 26, 0.78);
+}
+
+.card-front.has-art .card-rule-box:not(:empty) {
+    background-color: rgba(10, 5, 26, 0.78);
+}
+
+/* Empty command slots let the art show through */
+.card-front.has-art .card-rule-box:empty {
+    background-color: transparent;
+    backdrop-filter: none;
+}
+
+.card-front.has-art .card-rule-box:empty::before,
+.card-front.has-art .card-rule-box:empty::after {
+    opacity: 0.35;
+}
+
+/* Detail sheet: art banner across the top */
+.card-detail-art {
+    height: 92px;
+    margin: -10px -12px 10px;
+    border-radius: 10px 10px 0 0;
+    background-size: cover;
+    background-position: center 35%;
+    position: relative;
+}
+
+.card-detail-art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, transparent 40%, var(--surface-color) 100%);
+}
+
+/* Protocol picker tiles */
+.protocol-card.has-tile-art {
+    background-image:
+        linear-gradient(180deg, rgba(10, 5, 26, 0.35), rgba(10, 5, 26, 0.75)),
+        var(--tile-art) !important;
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+.protocol-card.has-tile-art .protocol-name {
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+
+.main-menu-attribution .art-credit {
+    opacity: 0.7;
+    font-size: 0.9em;
+}

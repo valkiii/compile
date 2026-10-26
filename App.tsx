@@ -13,12 +13,19 @@ import { StatisticsScreen } from './screens/StatisticsScreen';
 import { CustomProtocolCreator } from './screens/CustomProtocolCreator';
 import { RulesScreen } from './screens/RulesScreen';
 import { TutorialScreen } from './screens/TutorialScreen';
+import { OnlineLobby } from './screens/OnlineLobby';
+import { OnlineDraft } from './screens/OnlineDraft';
+import { RelayClient, Role, loadSavedSession } from './multiplayer/relayClient';
+import { OnlineGameSetup, isOnlineMessage } from './multiplayer/messages';
+import { clearHostGame, loadHostGame, saveHostGame } from './multiplayer/savedGame';
 import { CoinFlipModal } from './components/CoinFlipModal';
 import { Difficulty, GameMode, GameState } from './types';
 import { loadDefaultCustomProtocols } from './logic/customProtocols/loadDefaultProtocols';
 import * as testScenarios from './utils/testScenarios';
 
-type Screen = 'MainMenu' | 'ProtocolSelection' | 'GameScreen' | 'ResultsScreen' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules' | 'Tutorial';
+type Screen = 'MainMenu' | 'ProtocolSelection' | 'GameScreen' | 'ResultsScreen' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules' | 'Tutorial' | 'OnlineLobby' | 'OnlineDraft';
+
+type OnlineConnection = { client: RelayClient; role: Role };
 
 // Simple, low-interaction protocols for the guided first game
 const TUTORIAL_PLAYER_PROTOCOLS = ['Life', 'Light', 'Fire'];
@@ -37,6 +44,35 @@ export function App() {
   const [useControl, setUseControl] = useState(true);
   const [startingPlayer, setStartingPlayer] = useState<Player>('player');
   const [initialScenarioSetup, setInitialScenarioSetup] = useState<((state: GameState) => GameState) | null>(null);
+
+  // Online multiplayer
+  const [online, setOnline] = useState<OnlineConnection | null>(null);
+  const [onlineSetup, setOnlineSetup] = useState<OnlineGameSetup | null>(null);
+  const [onlineResumeState, setOnlineResumeState] = useState<GameState | null>(null);
+  const [joinCode] = useState<string | null>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('join');
+    } catch {
+      return null;
+    }
+  });
+  const [savedSession, setSavedSession] = useState(() => loadSavedSession());
+  const screenRef = React.useRef(screen);
+  screenRef.current = screen;
+  const onlineSetupRef = React.useRef(onlineSetup);
+  onlineSetupRef.current = onlineSetup;
+
+  // Invite links open the lobby straight away
+  useEffect(() => {
+    if (joinCode) {
+      setScreen('OnlineLobby');
+      // Drop ?join= so a reload doesn't try to join the same room again (keep other params)
+      const params = new URLSearchParams(window.location.search);
+      params.delete('join');
+      const rest = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+    }
+  }, [joinCode]);
 
   // Load default custom protocols on app start (Anarchy_custom for testing)
   useEffect(() => {
@@ -111,6 +147,96 @@ export function App() {
     setGameMode(mode => mode === 'tutorial' ? 'standard' : mode);
   }, []);
 
+  const leaveOnline = useCallback(() => {
+    online?.client.leave();
+    clearHostGame();
+    setOnline(null);
+    setOnlineSetup(null);
+    setOnlineResumeState(null);
+    setSavedSession(null);
+    setGameMode('standard');
+    handleBackToMenu();
+  }, [online, handleBackToMenu]);
+
+  const startOnlineGame = useCallback((setup: OnlineGameSetup, role: Role) => {
+    setOnlineSetup(setup);
+    setOnlineResumeState(null);
+    setPlayerProtocols(role === 'host' ? setup.hostProtocols : setup.guestProtocols);
+    setOpponentProtocols(role === 'host' ? setup.guestProtocols : setup.hostProtocols);
+    setUseControl(setup.useControl);
+    setWinner(null);
+    setFinalGameState(null);
+    setLossReason(null);
+    setGameMode('online');
+    setScreen('GameScreen');
+  }, []);
+
+  const handleOnlineReady = useCallback((client: RelayClient, role: Role) => {
+    setOnline({ client, role });
+    setGameMode('online');
+    setScreen('OnlineDraft');
+  }, []);
+
+  // Rejoin after the page was reloaded (Safari discarded the tab, phone restarted, ...)
+  const resumeOnline = useCallback(() => {
+    const session = loadSavedSession();
+    if (!session) return;
+    const client = new RelayClient();
+    client.resume(session);
+    setOnline({ client, role: session.role });
+    setGameMode('online');
+    const saved = session.role === 'host' ? loadHostGame(session.room) : null;
+    if (saved) {
+      setOnlineSetup(saved.setup);
+      setOnlineResumeState(saved.state);
+      setPlayerProtocols(saved.setup.hostProtocols);
+      setOpponentProtocols(saved.setup.guestProtocols);
+      setUseControl(saved.setup.useControl);
+      setScreen('GameScreen');
+    } else {
+      // Host without a saved game restarts the draft; the guest is routed by the host's messages
+      // (the guest's draft screen asks the host for the current draft or game)
+      setScreen('OnlineDraft');
+    }
+  }, []);
+
+  // App-level online routing (screen changes driven by the other player)
+  useEffect(() => {
+    if (!online) return;
+    const { client, role } = online;
+    return client.on(event => {
+      if (event.type === 'error' && (event.code === 'taken' || event.code === 'no_room')) {
+        setSavedSession(null);
+      }
+      if (event.type !== 'message' || !isOnlineMessage(event.data)) return;
+      const msg = event.data;
+      if (role === 'guest') {
+        if (msg.k === 'start' && msg.game.gameId !== onlineSetupRef.current?.gameId) {
+          startOnlineGame(msg.game, 'guest');
+        } else if (msg.k === 'draft' && screenRef.current !== 'OnlineDraft' && msg.draft.step < 4) {
+          setScreen('OnlineDraft');
+        }
+      } else {
+        if (msg.k === 'sync' && screenRef.current === 'GameScreen' && onlineSetupRef.current) {
+          client.send({ k: 'start', game: onlineSetupRef.current });
+        } else if (msg.k === 'rematch' && screenRef.current === 'ResultsScreen') {
+          setOnlineSetup(null);
+          setScreen('OnlineDraft');
+        }
+      }
+    });
+  }, [online, startOnlineGame]);
+
+  const requestRematch = useCallback(() => {
+    if (!online) return;
+    if (online.role === 'host') {
+      setOnlineSetup(null);
+      setScreen('OnlineDraft');
+    } else {
+      online.client.send({ k: 'rematch' });
+    }
+  }, [online]);
+
   const startTutorialGame = useCallback(() => {
     setGameMode('tutorial');
     setDifficulty('easy');
@@ -124,7 +250,8 @@ export function App() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      // Escape must not silently abandon an online game
+      if (event.key === 'Escape' && !online) {
         handleBackToMenu();
       }
     };
@@ -133,7 +260,7 @@ export function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleBackToMenu]);
+  }, [handleBackToMenu, online]);
 
   const startGame = useCallback((playerProtos: string[], opponentProtos: string[]) => {
     setPlayerProtocols(playerProtos);
@@ -163,8 +290,29 @@ export function App() {
             onUseControlChange={setUseControl}
             gameMode={gameMode}
             setGameMode={setGameMode}
+            resumableOnlineRoom={savedSession?.room ?? null}
+            onResumeOnline={resumeOnline}
           />
         );
+      case 'OnlineLobby':
+        return (
+          <OnlineLobby
+            initialJoinCode={joinCode}
+            onReady={handleOnlineReady}
+            onBack={online ? leaveOnline : handleBackToMenu}
+          />
+        );
+      case 'OnlineDraft':
+        return online ? (
+          <OnlineDraft
+            key={`draft-${onlineSetup?.gameId ?? 'new'}-${online.role}`}
+            client={online.client}
+            role={online.role}
+            useControl={useControl}
+            onStart={setup => startOnlineGame(setup, online.role)}
+            onLeave={leaveOnline}
+          />
+        ) : null;
       case 'ProtocolSelection':
         return (
           <ProtocolSelection
@@ -176,7 +324,8 @@ export function App() {
       case 'GameScreen':
         return (
           <GameScreen
-            onBack={handleBackToMenu}
+            key={onlineSetup?.gameId ?? 'local'}
+            onBack={gameMode === 'online' ? leaveOnline : handleBackToMenu}
             onEndGame={handleEndGame}
             playerProtocols={playerProtocols}
             opponentProtocols={opponentProtocols}
@@ -185,10 +334,29 @@ export function App() {
             mode={gameMode}
             startingPlayer={startingPlayer}
             initialScenarioSetup={initialScenarioSetup}
+            online={gameMode === 'online' && online && onlineSetup ? {
+              client: online.client,
+              role: online.role,
+              setup: onlineSetup,
+              initialState: onlineResumeState ?? undefined,
+              onHostStateChange: online.role === 'host'
+                ? state => saveHostGame(online.client.session?.room ?? '', onlineSetup, state)
+                : undefined,
+            } : undefined}
           />
         );
       case 'ResultsScreen':
-        return <ResultsScreen onPlayAgain={handleBackToMenu} winner={winner} finalState={finalGameState} difficulty={difficulty} mode={gameMode} lossReason={lossReason} />;
+        return (
+          <ResultsScreen
+            onPlayAgain={gameMode === 'online' ? leaveOnline : handleBackToMenu}
+            onRematch={gameMode === 'online' ? requestRematch : undefined}
+            winner={winner}
+            finalState={finalGameState}
+            difficulty={difficulty}
+            mode={gameMode}
+            lossReason={lossReason}
+          />
+        );
       case 'CardLibrary':
         return <CardLibraryScreen onBack={handleBackToMenu} />;
       case 'Statistics':
@@ -200,7 +368,7 @@ export function App() {
       case 'Tutorial':
         return <TutorialScreen onBack={handleBackToMenu} onStartTutorialGame={startTutorialGame} />;
       default:
-        return <MainMenu onNavigate={(target) => setScreen(target)} difficulty={difficulty} setDifficulty={setDifficulty} useControl={useControl} onUseControlChange={setUseControl} gameMode={gameMode} setGameMode={setGameMode} />;
+        return <MainMenu onNavigate={(target) => setScreen(target)} difficulty={difficulty} setDifficulty={setDifficulty} useControl={useControl} onUseControlChange={setUseControl} gameMode={gameMode} setGameMode={setGameMode} resumableOnlineRoom={savedSession?.room ?? null} onResumeOnline={resumeOnline} />;
     }
   };
 

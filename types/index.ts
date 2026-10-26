@@ -9,8 +9,8 @@ export type { Card };
 
 export type Player = 'player' | 'opponent';
 export type Difficulty = 'easy' | 'normal' | 'hard';
-/** standard = drafted match vs AI, solo = "Deck Run" solo variant, tutorial = guided first game */
-export type GameMode = 'standard' | 'solo' | 'tutorial';
+/** standard = drafted match vs AI, solo = "Deck Run" solo variant, tutorial = guided first game, online = vs a friend */
+export type GameMode = 'standard' | 'solo' | 'tutorial' | 'online';
 
 export interface PlayedCard extends Card {
     id: string;

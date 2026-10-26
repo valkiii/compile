@@ -42,6 +42,15 @@ import { isGameLoggingEnabled, startGameLog, traceGameState } from '../logic/uti
 
 // NOTE: processCompileAnimations moved to aiAnimationCreators.ts (DRY - central animation helpers)
 
+export interface OnlineEngineOptions {
+    /** Supplies the remote player's moves; null = not received yet (the turn pauses). */
+    decide: aiManager.DecisionProvider;
+    /** Bumped whenever a remote move arrives, so paused opponent processing resumes. */
+    remoteVersion: number;
+    /** Resume a saved game instead of dealing a new one. */
+    initialState?: GameState;
+}
+
 export const useGameState = (
     playerProtocols: string[],
     opponentProtocols: string[],
@@ -54,12 +63,17 @@ export const useGameState = (
     enqueueAnimation?: (item: Omit<AnimationQueueItem, 'id'>) => void,
     enqueueAnimations?: (items: Omit<AnimationQueueItem, 'id'>[]) => void,
     // NEW: Animation queue state for blocking AI until animations complete
-    isAnimating?: boolean
+    isAnimating?: boolean,
+    // Online multiplayer (host): the remote player's moves replace the AI
+    online?: OnlineEngineOptions
 ) => {
     const [gameState, setGameState] = useState<GameState>(() => {
+        if (online?.initialState) return online.initialState;
         const initialState = stateManager.createInitialState(playerProtocols, opponentProtocols, useControlMechanic, startingPlayer);
         return stateManager.recalculateAllLaneValues(initialState);
     });
+    const decide = online?.decide;
+    const remoteVersion = online?.remoteVersion ?? 0;
 
     const [selectedCard, setSelectedCard] = useState<string | null>(null);
 
@@ -1449,6 +1463,30 @@ export const useGameState = (
         }
     }, [isAnimating]);
 
+    // Dispatchers for the online interrupt path (same set Hooks 1 and 2 build inline)
+    const engineActions = {
+        compileLane: (s: GameState, l: number) => resolvers.performCompile(s, l, onEndGame),
+        playCard: resolvers.playCard,
+        fillHand: resolvers.performFillHand,
+        discardCards: resolvers.discardCards,
+        flipCard: resolvers.flipCard,
+        deleteCard: (s: GameState, c: string) => ({
+            newState: s,
+            animationRequests: [{ type: 'delete', cardId: c, owner: 'opponent' as Player }] as AnimationRequest[]
+        }),
+        returnCard: resolvers.returnCard,
+        skipAction: resolvers.skipAction,
+        resolveOptionalDrawPrompt: resolvers.resolveOptionalDrawPrompt,
+        resolveOptionalDiscardCustomPrompt: resolvers.resolveOptionalDiscardCustomPrompt,
+        resolveOptionalEffectPrompt: resolvers.resolveOptionalEffectPrompt,
+        resolveVariableDiscard: resolvers.resolveVariableDiscard,
+        resolveRearrangeProtocols: (s: GameState, o: string[]) => resolvers.resolveRearrangeProtocols(s, o, onEndGame),
+        resolveActionWithHandCard: resolvers.resolveActionWithHandCard,
+        resolveSwapProtocols: (s: GameState, o: [number, number]) => resolvers.resolveSwapProtocols(s, o, onEndGame),
+        revealOpponentHand: resolvers.revealOpponentHand,
+        resolveCustomChoice: resolvers.resolveCustomChoice,
+    };
+
     // Hook 1: AI Turn Processing (Normal opponent turns)
     // NEW: Uses synchronous AI system - no setTimeout, no callbacks
     useEffect(() => {
@@ -1517,7 +1555,8 @@ export const useGameState = (
                     },
                     phaseManager,
                     enqueueAnimation,
-                    (s, l) => resolvers.performCompile(s, l, onEndGame)
+                    (s, l) => resolvers.performCompile(s, l, onEndGame),
+                    decide
                 );
 
                 // Set the final state directly
@@ -1525,7 +1564,7 @@ export const useGameState = (
                 isProcessingAIRef.current = false;
             });
         }
-    }, [gameState.turn, gameState.phase, gameState.winner, isAnimating, gameState._interruptedTurn, difficulty, onEndGame, enqueueAnimation, gameState.actionRequired]);
+    }, [gameState.turn, gameState.phase, gameState.winner, isAnimating, gameState._interruptedTurn, difficulty, onEndGame, enqueueAnimation, gameState.actionRequired, remoteVersion]);
 
     // Hook 2: Opponent Action During Player Turn (Interrupts)
     // Uses synchronous system - processes ONE action per render, re-fires when actionRequired changes
@@ -1545,6 +1584,19 @@ export const useGameState = (
 
             setGameState(prevState => {
                 const actionBefore = prevState.actionRequired;
+
+                // Online: the remote player decides; waiting for them is not a softlock
+                if (decide) {
+                    const next = aiManager.handleRequiredActionSync(prevState, difficulty, engineActions, phaseManager, enqueueAnimation, decide);
+                    if (aiManager.isAwaitingRemoteDecision(next)) return prevState;
+                    if (next.actionRequired && next.actionRequired === actionBefore) {
+                        // The remote move changed nothing: ask again rather than skipping their effect
+                        console.warn('[online] remote move made no progress, asking again:', actionBefore?.type);
+                        decide(prevState, prevState.actionRequired);
+                        return prevState;
+                    }
+                    return next;
+                }
 
                 // ANTI-SOFTLOCK (content-based): some broken paths RECREATE an
                 // identical actionRequired each round, so reference checks never
@@ -1610,7 +1662,7 @@ export const useGameState = (
 
             isProcessingAIRef.current = false;
         }
-    }, [gameState.actionRequired, gameState.turn, gameState._interruptedTurn, isAnimating, difficulty, onEndGame, enqueueAnimation]);
+    }, [gameState.actionRequired, gameState.turn, gameState._interruptedTurn, isAnimating, difficulty, onEndGame, enqueueAnimation, remoteVersion]);
 
     useEffect(() => {
         setGameState(currentState => {

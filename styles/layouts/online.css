@@ -1,0 +1,207 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Online multiplayer: lobby, draft, connection banner.
+ */
+
+.online-lobby {
+    justify-content: flex-start;
+    padding-top: 6rem;
+}
+
+.online-card {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.9rem;
+    padding: 1.5rem;
+    background: var(--surface-color);
+    border: 1px solid var(--surface-hover);
+    border-radius: 12px;
+}
+
+.online-card .btn-start,
+.results-online-actions .btn-start,
+.btn.btn-online {
+    background: var(--primary-color);
+    color: var(--background-color);
+}
+
+.btn.btn-online {
+    width: 100%;
+    background: transparent;
+    color: var(--primary-color);
+    border-style: dashed;
+}
+
+.online-intro,
+.online-hint {
+    font-size: 0.85rem;
+    margin: 0 auto;
+}
+
+.online-hint {
+    opacity: 0.75;
+    font-size: 0.75rem;
+}
+
+.online-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--secondary-color);
+    font-size: 0.75rem;
+}
+
+.online-divider::before,
+.online-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--surface-hover);
+}
+
+.online-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--secondary-color);
+    text-align: center;
+}
+
+.online-code {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: 0.5rem;
+    text-align: center;
+    color: var(--primary-color);
+    text-shadow: 0 0 14px hsla(188, 100%, 69%, 0.5);
+}
+
+.online-code-input {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.5rem;
+    text-align: center;
+    text-transform: uppercase;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--secondary-color);
+    background: var(--background-color);
+    color: var(--primary-color);
+    width: 100%;
+}
+
+.online-waiting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    margin: 0 auto;
+}
+
+.online-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    flex-shrink: 0;
+    animation: online-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes online-pulse {
+    50% { opacity: 0.25; }
+}
+
+.online-error {
+    color: var(--danger-color);
+    font-size: 0.85rem;
+}
+
+.online-your-turn {
+    color: var(--primary-color) !important;
+    font-weight: 600;
+}
+
+.online-draft-picks {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.online-draft-picks .player-protocols-area,
+.online-draft-picks .opponent-protocols-area {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    min-height: 0;
+    height: auto;
+}
+
+.online-draft-picks h3 {
+    width: 100%;
+    margin: 0;
+    font-size: 0.75rem;
+}
+
+.online-draft .protocol-selection-layout {
+    display: none;
+}
+
+.online-status-bar {
+    position: fixed;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    transform: translateX(-50%);
+    z-index: 2500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: calc(100vw - 24px);
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    background: var(--surface-color);
+    border: 1px solid var(--secondary-color);
+    color: var(--text-color);
+    font-size: 0.8rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.online-status-bar.bad {
+    border-color: var(--danger-color);
+}
+
+.online-status-bar.bad .online-status-dot {
+    background: var(--danger-color);
+}
+
+.results-online-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+    .online-lobby {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+    }
+
+    .online-status-bar {
+        top: calc(env(safe-area-inset-top, 0px) + 48px);
+        bottom: auto;
+    }
+}
+
+/* Draft order: picks, grid, card text (index.css reorders protocol screens on small widths) */
+.online-draft .online-draft-picks { order: 0; }
+.online-draft .protocol-grid-container { order: 1 !important; }
+.online-draft .selected-protocol-cards-container { order: 2; }

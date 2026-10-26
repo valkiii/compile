@@ -5,6 +5,7 @@
 
 import React from "react";
 import { PlayedCard } from "../types";
+import { cardArtUrl } from "../data/cardArt";
 
 interface CardProps {
   card: PlayedCard;
@@ -94,6 +95,8 @@ export const CardComponent: React.FC<CardProps> = ({
     (customStyle as any)["--card-custom-color"] = card.color;
   }
 
+  const artUrl = cardArtUrl(card.protocol, card.value);
+
   return (
     <div
       className={classNames.join(" ")}
@@ -105,7 +108,8 @@ export const CardComponent: React.FC<CardProps> = ({
       style={customStyle}
     >
       <div className={`card-inner ${!isFaceUp ? "is-flipped" : ""}`}>
-        <div className="card-face card-front">
+        <div className={`card-face card-front ${artUrl ? "has-art" : ""}`}>
+          {artUrl && <div className="card-art" style={{ backgroundImage: `url(${artUrl})` }} aria-hidden="true" />}
           <div className="card-header">
             <span
               className={`card-protocol ${

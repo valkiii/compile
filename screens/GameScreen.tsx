@@ -39,6 +39,11 @@ import { MobileTopBar, MiniPile } from '../components/MobileGameHud';
 import { CoachHints } from '../components/CoachHints';
 import { TutorialSlides } from '../components/TutorialSlides';
 import { didPlayerReshuffle } from '../logic/game/soloMode';
+import { RelayClient } from '../multiplayer/relayClient';
+import { HostChannel } from '../multiplayer/hostChannel';
+import { OnlineGameSetup, isOnlineMessage } from '../multiplayer/messages';
+import { useGuestGame } from '../multiplayer/useGuestGame';
+import { OnlineStatusBar } from '../components/OnlineStatusBar';
 import '../styles/layouts/tutorial.css';
 
 const SOLO_DECK_OUT_REASON = 'Your deck ran dry. In a Solo Deck Run your trash is never reshuffled.';
@@ -57,7 +62,22 @@ interface GameScreenProps {
   startingPlayer?: Player;
   // E2E Testing: Setup function for complex test scenarios
   initialScenarioSetup?: ((state: GameState) => GameState) | null;
+  // Online multiplayer (mode 'online')
+  online?: OnlineGameProps;
 }
+
+export interface OnlineGameProps {
+  client: RelayClient;
+  role: 'host' | 'guest';
+  setup: OnlineGameSetup;
+  /** Host only: resume a saved game */
+  initialState?: GameState;
+  /** Host only: persist the game so it survives Safari reloading the tab */
+  onHostStateChange?: (state: GameState) => void;
+}
+
+// Prompts answered by choosing a lane (tapping anywhere in that lane, cards included)
+const LANE_SELECTION_ACTIONS = new Set<string>(['select_lane_for_shift', 'select_lane_for_shift_all', 'shift_flipped_card_optional', 'select_lane_for_play', 'select_lane_for_delete', 'select_lane_for_death_2', 'select_lane_for_life_3_play', 'select_lane_to_shift_revealed_card_for_light_2', 'select_lane_to_shift_revealed_board_card_custom', 'select_lane_to_shift_cards_for_light_3', 'select_lane_for_water_3', 'select_lane_for_metal_3_delete', 'select_lane_for_delete_all', 'select_lane_for_return', 'select_lanes_for_swap_stacks']);
 
 type PreviewState = {
   card: PlayedCard;
@@ -90,9 +110,15 @@ const ACTIONS_REQUIRING_HAND_INTERACTION = new Set<ActionRequired['type']>([
  * GameScreen - Wrapper that provides AnimationQueueContext
  */
 export function GameScreen(props: GameScreenProps) {
+  // Online host: one channel per game, shared by the engine (moves) and the animation queue (replays)
+  const { online } = props;
+  const hostChannel = useMemo(
+    () => (online?.role === 'host' ? new HostChannel(online.client, online.setup.gameId) : null),
+    [online?.role, online?.client, online?.setup.gameId]
+  );
   return (
-    <AnimationQueueProvider>
-      <GameScreenContent {...props} />
+    <AnimationQueueProvider onEnqueue={hostChannel ? items => hostChannel.forwardAnimations(items) : undefined}>
+      <GameScreenContent {...props} hostChannel={hostChannel} />
     </AnimationQueueProvider>
   );
 }
@@ -100,15 +126,21 @@ export function GameScreen(props: GameScreenProps) {
 /**
  * GameScreenContent - Main game screen content
  */
-function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtocols, difficulty, useControlMechanic, mode = 'standard', startingPlayer = 'player', initialScenarioSetup }: GameScreenProps) {
+function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtocols, difficulty, useControlMechanic, mode = 'standard', startingPlayer = 'player', initialScenarioSetup, online, hostChannel }: GameScreenProps & { hostChannel: HostChannel | null }) {
+  const isOnline = mode === 'online' && !!online;
+  const isGuest = isOnline && online!.role === 'guest';
   const isCompact = useIsCompact();
   const isPhoneLandscape = useIsPhoneLandscape();
   const [showHelp, setShowHelp] = useState(false);
   // Animation queue context for the new animation system
   const { isAnimating, currentAnimation, enqueueAnimation, enqueueAnimations, getIsAnimatingSync, getAnimationSync } = useAnimationQueue();
   // Determine starting player via coin flip on first mount
-  const [actualStartingPlayer, setActualStartingPlayer] = useState<Player | null>(null);
-  const [showCoinFlip, setShowCoinFlip] = useState(true);
+  // Online: the host already decided who starts (setup is in the host's frame)
+  const onlineStarter: Player | null = isOnline
+    ? (isGuest ? (online!.setup.startingPlayer === 'player' ? 'opponent' : 'player') : online!.setup.startingPlayer)
+    : null;
+  const [actualStartingPlayer, setActualStartingPlayer] = useState<Player | null>(onlineStarter);
+  const [showCoinFlip, setShowCoinFlip] = useState(!isOnline);
 
   // Statistics tracking
   const {
@@ -144,13 +176,19 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
 
   // Start tracking when coin flip completes
   useEffect(() => {
-    if (!showCoinFlip && actualStartingPlayer) {
+    if (!showCoinFlip && actualStartingPlayer && !isOnline) {
       startGameTracking();
     }
-  }, [showCoinFlip, actualStartingPlayer, startGameTracking]);
+  }, [showCoinFlip, actualStartingPlayer, startGameTracking, isOnline]);
 
   // Wrap onEndGame to track statistics
   const wrappedOnEndGame = useCallback((winner: Player, finalState: GameState, reason?: string) => {
+    // Online games don't count towards the vs-AI statistics
+    if (isOnline) {
+      hostChannel?.announceEnd(winner);
+      onEndGame(winner, finalState, reason);
+      return;
+    }
     // Count compiles
     const compilesCount = finalState.player.compiled.filter(c => c).length;
 
@@ -163,9 +201,48 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
       finalState.detailedGameStats
     );
     onEndGame(winner, finalState, reason);
-  }, [endGame, onEndGame]);
+  }, [endGame, onEndGame, isOnline, hostChannel]);
 
   // Initialize game state - will use 'player' initially, but that's ok because we don't show the game until coin flip is done
+  // Online host: the guest's moves come through the channel instead of the AI
+  const [remoteVersion, setRemoteVersion] = useState(0);
+  useEffect(() => {
+    if (!hostChannel || !online) return;
+    hostChannel.onRemoteAction = () => setRemoteVersion(v => v + 1);
+    const off = online.client.on(event => {
+      if (event.type === 'message' && isOnlineMessage(event.data)) hostChannel.handleMessage(event.data);
+    });
+    return off;
+  }, [hostChannel, online]);
+
+  const guestGameOptions = isGuest ? {
+    client: online!.client,
+    gameId: online!.setup.gameId,
+    playerProtocols,
+    opponentProtocols,
+    useControlMechanic,
+    onEndGame: (winner: Player, finalState: GameState) => onEndGame(winner, finalState),
+    enqueueAnimations,
+  } : null;
+
+  // isGuest never changes while this screen is mounted (App remounts it per game), so the hook order is stable
+  const engine = guestGameOptions
+    ? useGuestGame(guestGameOptions)
+    : useGameState(
+    playerProtocols,
+    opponentProtocols,
+    wrappedOnEndGame,
+    difficulty,
+    useControlMechanic,
+    actualStartingPlayer ?? 'player',
+    trackPlayerRearrange,
+    // NEW: Pass animation queue functions for the new animation system
+    enqueueAnimation,
+    enqueueAnimations,
+    // NEW: Pass animation state so AI waits for phase transitions
+    isAnimating,
+      hostChannel ? { decide: hostChannel.decide, remoteVersion, initialState: online?.initialState } : undefined
+    );
   const {
     gameState,
     selectedCard,
@@ -199,20 +276,8 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
     resolveSelectTrashCardToPlay,
     resolveSelectTrashCardToReveal,
     setupTestScenario,
-  } = useGameState(
-    playerProtocols,
-    opponentProtocols,
-    wrappedOnEndGame,
-    difficulty,
-    useControlMechanic,
-    actualStartingPlayer ?? 'player',
-    trackPlayerRearrange,
-    // NEW: Pass animation queue functions for the new animation system
-    enqueueAnimation,
-    enqueueAnimations,
-    // NEW: Pass animation state so AI waits for phase transitions
-    isAnimating
-  );
+  } = engine;
+
 
   // CRITICAL: Track the last valid animation state to prevent flashing gameState during transitions
   // When animation A completes and animation B starts, there's a brief gap where refs are stale
@@ -376,7 +441,16 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
   const gameStateRef = useRef(gameState);
   useEffect(() => {
       gameStateRef.current = gameState;
+      // ?debug exposes the live state for automated tests
+      if (window.location.search.includes('debug')) (window as unknown as { __gameState: GameState }).__gameState = gameState;
   }, [gameState]);
+
+  // Online host: stream every state to the guest and keep a resumable copy
+  useEffect(() => {
+    if (!hostChannel) return;
+    hostChannel.publish(gameState);
+    online?.onHostStateChange?.(gameState);
+  }, [gameState, hostChannel]);
 
   // Solo Deck Run: the run ends the moment the player's trash would be reshuffled into their deck
   const soloPrevStateRef = useRef(gameState);
@@ -598,7 +672,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
     // (e.g., Spirit-3 triggering during opponent's end phase), the player needs to act
     // even though turn might still be set to 'opponent'.
     if (actionRequired && actionRequired.actor === 'player' &&
-        ['select_lane_for_shift', 'select_lane_for_shift_all', 'shift_flipped_card_optional', 'select_lane_for_play', 'select_lane_for_delete', 'select_lane_for_death_2', 'select_lane_for_life_3_play', 'select_lane_to_shift_revealed_card_for_light_2', 'select_lane_to_shift_revealed_board_card_custom', 'select_lane_to_shift_cards_for_light_3', 'select_lane_for_water_3', 'select_lane_for_metal_3_delete', 'select_lane_for_delete_all', 'select_lane_for_return', 'select_lanes_for_swap_stacks'].includes(actionRequired.type)) {
+        LANE_SELECTION_ACTIONS.has(actionRequired.type)) {
         resolveActionWithLane(laneIndex);
         return;
     }
@@ -732,6 +806,9 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
     if (isAnimating) return;
 
     if (currentState.actionRequired) {
+      // Hand prompts belong to whoever must act: never answer the opponent's prompt with our cards
+      if ('actor' in currentState.actionRequired && currentState.actionRequired.actor !== 'player') return;
+
       // Check for discard action
       if (currentState.actionRequired.type === 'discard' && currentState.actionRequired.actor === 'player') {
         const discardCount = currentState.actionRequired.count;
@@ -813,6 +890,12 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                   return;
               }
           }
+      }
+
+      // A lane is being chosen: a tap on a card counts as a tap on its lane (cards cover most of a lane on phones)
+      if (actionRequired && actionRequired.actor === 'player' && LANE_SELECTION_ACTIONS.has(actionRequired.type)) {
+          handleLanePointerDown(laneIndex, owner);
+          return;
       }
 
       // If it's not a proxy, it's a card-specific interaction.
@@ -1085,7 +1168,8 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 {isCompact && (
                   <MobileTopBar
                     opponent={visualGameState.opponent}
-                    difficultyLabel={difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                    opponentName={isOnline ? 'Rival' : 'AI'}
+                    difficultyLabel={isOnline ? 'online' : difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
                     turn={displayedTurn}
                     phase={overridePhase ?? visualGameState.phase}
                     onQuit={onBack}
@@ -1215,6 +1299,12 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
             </div>
         </div>
         {showCoinFlip && <CoinFlipModal onComplete={handleCoinFlipComplete} />}
+        {isOnline && (
+            <OnlineStatusBar
+                client={online!.client}
+                waitingForHost={isGuest && !(engine as { hasHostState?: boolean }).hasHostState}
+            />
+        )}
         {isPhoneLandscape && (
             <div className="rotate-overlay">
                 <div className="rotate-icon">⟲</div>

@@ -69,6 +69,21 @@ const endActionForPhase = (state: GameState, phaseManager: PhaseManager): GameSt
     return phaseManager.processEndOfAction(state);
 };
 
+/**
+ * Optional replacement for the built-in AI (online multiplayer: the remote player's moves).
+ * Returning null means "no decision yet": the opponent's turn pauses and resumes when called again.
+ */
+export type DecisionProvider = (state: GameState, action: ActionRequired | null) => AIAction | null;
+
+// States returned unchanged because a DecisionProvider had no decision yet.
+// Callers must not treat these as "no progress" (their anti-softlock would skip the action).
+const awaitingRemoteStates = new WeakSet<GameState>();
+export const isAwaitingRemoteDecision = (state: GameState): boolean => awaitingRemoteStates.has(state);
+const pauseForRemote = (state: GameState): GameState => {
+    awaitingRemoteStates.add(state);
+    return state;
+};
+
 const getAIAction = (state: GameState, action: ActionRequired | null, difficulty: Difficulty): AIAction => {
     switch (difficulty) {
         case 'normal':
@@ -96,7 +111,8 @@ export const handleRequiredActionSync = (
     difficulty: Difficulty,
     actions: ActionDispatchers,
     phaseManager: PhaseManager,
-    enqueueAnimation: (item: Omit<AnimationQueueItem, 'id'>) => void
+    enqueueAnimation: (item: Omit<AnimationQueueItem, 'id'>) => void,
+    decide?: DecisionProvider
 ): GameState => {
     const action = state.actionRequired!;
 
@@ -140,10 +156,15 @@ export const handleRequiredActionSync = (
         return endActionForPhase(newState, phaseManager);
     }
 
-    const aiDecision = getAIAction(state, action, difficulty);
+    // --- EXECUTE CONDITIONAL FOLLOWUP is automatic too: never ask a remote player for it ---
+    // (AI games keep their original behaviour, hence the decide check)
+    const isAutomatic = !!decide && action.type === 'execute_conditional_followup';
+    const remoteDecision = decide && !isAutomatic ? decide(state, action) : undefined;
+    if (remoteDecision === null) return pauseForRemote(state);
+    const aiDecision = remoteDecision ?? (isAutomatic ? { type: 'skip' } as AIAction : getAIAction(state, action, difficulty));
 
     // --- SKIP ---
-    if (aiDecision.type === 'skip') {
+    if (aiDecision.type === 'skip' && !isAutomatic) {
         const newState = actions.skipAction(state);
         return state.phase === 'start'
             ? phaseManager.continueTurnAfterStartPhaseAction(newState)
@@ -494,14 +515,18 @@ export const runOpponentTurnSync = (
     actions: ActionDispatchers,
     phaseManager: PhaseManager,
     enqueueAnimation: (item: Omit<AnimationQueueItem, 'id'>) => void,
-    onCompileLane?: (state: GameState, laneIndex: number) => GameState
+    onCompileLane?: (state: GameState, laneIndex: number) => GameState,
+    decide?: DecisionProvider
 ): GameState => {
     let state = { ...initialState };
 
     // Enqueue a delay animation at the start of opponent's turn (AI "thinking" time)
     // This replaces the old 1500ms setTimeout delay and shows the correct game state during the wait
-    const delayAnimation = createDelayAnimation(state, 1000);
-    enqueueAnimation(delayAnimation);
+    // A remote human needs no fake thinking time (and this runs again after each of their moves)
+    if (!decide) {
+        const delayAnimation = createDelayAnimation(state, 1000);
+        enqueueAnimation(delayAnimation);
+    }
 
     // Safety counter to prevent infinite loops
     let iterations = 0;
@@ -559,7 +584,16 @@ export const runOpponentTurnSync = (
 
             // Handle opponent action synchronously
             const actionBefore = state.actionRequired;
-            state = handleRequiredActionSync(state, difficulty, actions, phaseManager, enqueueAnimation);
+            state = handleRequiredActionSync(state, difficulty, actions, phaseManager, enqueueAnimation, decide);
+            if (isAwaitingRemoteDecision(state)) return state;
+
+            // Online: a remote move that changed nothing (e.g. an illegal lane) is not a softlock.
+            // Ask the remote player again instead of skipping their effect.
+            if (decide && state.actionRequired && state.actionRequired === actionBefore) {
+                console.warn('[online] remote move made no progress, asking again:', actionBefore?.type);
+                decide(state, state.actionRequired);
+                return pauseForRemote(state);
+            }
 
             // ANTI-SOFTLOCK: If the handler made NO progress (the exact same
             // actionRequired is still pending), force-skip it. Otherwise this
@@ -581,7 +615,8 @@ export const runOpponentTurnSync = (
 
         // 3. Handle compile phase
         if (state.phase === 'compile' && state.compilableLanes.length > 0) {
-            const decision = getAIAction(state, null, difficulty);
+            const decision = decide ? decide(state, null) : getAIAction(state, null, difficulty);
+            if (decision === null) return pauseForRemote(state);
             if (decision.type === 'compile') {
                 const laneIndex = decision.laneIndex;
 
@@ -608,7 +643,8 @@ export const runOpponentTurnSync = (
 
         // 4. Handle action phase
         if (state.phase === 'action' && !state._cardPlayedThisActionPhase) {
-            const decision = getAIAction(state, null, difficulty);
+            const decision = decide ? decide(state, null) : getAIAction(state, null, difficulty);
+            if (decision === null) return pauseForRemote(state);
 
             // Fill hand
             // NOTE: drawForPlayer sets _pendingAnimationRequests (DRY - single place for draw animations)

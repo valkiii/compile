@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { PlayedCard } from '../types';
+import { cardArtUrl } from '../data/cardArt';
 
 interface CardDetailSheetProps {
     card: PlayedCard;
@@ -29,6 +30,9 @@ export const CardDetailSheet: React.FC<CardDetailSheetProps> = ({ card, showCont
             <div className={`card-detail-panel card-protocol-${card.protocol.toLowerCase()}`} style={style}>
                 {showContents ? (
                     <>
+                        {cardArtUrl(card.protocol, card.value) && (
+                            <div className="card-detail-art" style={{ backgroundImage: `url(${cardArtUrl(card.protocol, card.value)})` }} aria-hidden="true" />
+                        )}
                         <div className="card-detail-header">
                             <span className="card-detail-protocol">{card.protocol}</span>
                             {!card.isFaceUp && <span className="card-detail-tag">face-down · counts as 2</span>}

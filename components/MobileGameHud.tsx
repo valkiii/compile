@@ -37,6 +37,7 @@ export const MiniPile: React.FC<MiniPileProps> = ({ owner, kind, count, warn, on
 
 interface MobileTopBarProps {
     opponent: PlayerState;
+    opponentName?: string;
     difficultyLabel: string;
     turn: Player;
     phase: GamePhase;
@@ -46,7 +47,7 @@ interface MobileTopBarProps {
     onPileClick: (owner: Player) => void;
 }
 
-export const MobileTopBar: React.FC<MobileTopBarProps> = ({ opponent, difficultyLabel, turn, phase, onQuit, onShowLog, onShowHelp, onPileClick }) => {
+export const MobileTopBar: React.FC<MobileTopBarProps> = ({ opponent, opponentName = 'AI', difficultyLabel, turn, phase, onQuit, onShowLog, onShowHelp, onPileClick }) => {
     // Quitting a game by accident on a phone is easy, so it takes two taps
     const [confirmQuit, setConfirmQuit] = useState(false);
     useEffect(() => {
@@ -65,13 +66,13 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({ opponent, difficulty
                 {confirmQuit ? 'Quit?' : '✕'}
             </button>
             <div className="hud-opponent">
-                <span className="hud-opponent-name" title={`AI opponent (${difficultyLabel})`}>AI</span>
+                <span className="hud-opponent-name" title={`${opponentName} (${difficultyLabel})`}>{opponentName}</span>
                 <span className="hud-opponent-hand" title="Cards in opponent hand">✋ {opponent.hand.length}</span>
                 <MiniPile owner="opponent" kind="deck" count={opponent.deck.length} onClick={() => onPileClick('opponent')} />
                 <MiniPile owner="opponent" kind="trash" count={opponent.discard.length} onClick={() => onPileClick('opponent')} />
             </div>
             <div className={`hud-turn ${turn}-turn`}>
-                <span className="hud-turn-who">{turn === 'player' ? 'You' : 'AI'}</span>
+                <span className="hud-turn-who">{turn === 'player' ? 'You' : opponentName}</span>
                 <span className="hud-turn-phase">{PHASE_LABELS[phase] ?? phase}</span>
             </div>
             <button className="hud-btn" onClick={onShowLog} aria-label="Game log">Log</button>

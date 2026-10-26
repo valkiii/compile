@@ -16,6 +16,7 @@ import '../styles/layouts/protocol-selection.css';
 import { GameMode } from '../types';
 import { SOLO_PROTOCOL_PICKS } from '../logic/game/soloMode';
 import { useIsCompact } from '../hooks/useIsCompact';
+import { protocolTileUrl } from '../data/cardArt';
 
 
 interface ProtocolSelectionProps {
@@ -316,6 +317,7 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
   
   const getCardClassName = (protocol: string) => {
       const classNames = ['protocol-card', `card-protocol-${protocol.toLowerCase()}`];
+      if (protocolTileUrl(protocol)) classNames.push('has-tile-art');
       if (currentSelection.includes(protocol)) classNames.push('selected');
       if (chosenProtocols.has(protocol)) classNames.push('chosen');
       if (scanningProtocol === protocol) classNames.push('is-scanning');
@@ -393,7 +395,7 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
                   <div
                     key={protocol}
                     className={`${getCardClassName(protocol)} ${getProtocolPatternClass(protocol)}`}
-                    style={protocolStyle}
+                    style={{ ...protocolStyle, ...(protocolTileUrl(protocol) ? { '--tile-art': `url(${protocolTileUrl(protocol)})` } as React.CSSProperties : {}) }}
                     onClick={() => handleSelectProtocol(protocol)}
                     role="button"
                     aria-disabled={chosenProtocols.has(protocol) || !isPlayerTurn || isAnimating}

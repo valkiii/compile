@@ -607,3 +607,23 @@
 }
 
 
+
+/* Show every protocol at once (no 3-row scroll box) and let the page scroll on short screens */
+.protocol-selection-screen {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.protocol-selection-screen > * {
+  flex-shrink: 0;
+}
+
+.protocol-selection-layout {
+  flex-grow: 0;
+}
+
+.protocol-grid-scroll-wrapper {
+  max-height: none !important;
+  overflow: visible !important;
+}

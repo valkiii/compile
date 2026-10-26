@@ -22,9 +22,13 @@ const AnimationQueueContext = createContext<AnimationQueueContextValue | null>(n
 
 interface AnimationQueueProviderProps {
     children: React.ReactNode;
+    /** Observer for every enqueued animation (online host: replays them on the guest's screen). */
+    onEnqueue?: (items: Omit<AnimationQueueItem, 'id'>[]) => void;
 }
 
-export const AnimationQueueProvider: React.FC<AnimationQueueProviderProps> = ({ children }) => {
+export const AnimationQueueProvider: React.FC<AnimationQueueProviderProps> = ({ children, onEnqueue }) => {
+    const onEnqueueRef = useRef(onEnqueue);
+    onEnqueueRef.current = onEnqueue;
     // Queue state
     const [queue, setQueue] = useState<AnimationQueueItem[]>([]);
     const [currentAnimation, setCurrentAnimation] = useState<AnimationQueueItem | null>(null);
@@ -84,6 +88,7 @@ export const AnimationQueueProvider: React.FC<AnimationQueueProviderProps> = ({ 
      * Uses queueMicrotask to avoid "Cannot update component while rendering" React error.
      */
     const enqueueAnimation = useCallback((item: Omit<AnimationQueueItem, 'id'>) => {
+        onEnqueueRef.current?.([item]);
         const newItem: AnimationQueueItem = {
             ...item,
             id: uuidv4(),
@@ -120,6 +125,7 @@ export const AnimationQueueProvider: React.FC<AnimationQueueProviderProps> = ({ 
      */
     const enqueueAnimations = useCallback((items: Omit<AnimationQueueItem, 'id'>[]) => {
         if (items.length === 0) return;
+        onEnqueueRef.current?.(items);
 
         // CRITICAL: Set ref SYNCHRONOUSLY before async state update
         isAnimatingRef.current = true;

@@ -143,6 +143,14 @@ const SLIDES: Slide[] = [
         </ul>,
     },
     {
+        title: 'Play a friend online',
+        body: <ul>
+            <li>Tap <b>Play a Friend Online</b> → <b>Create room</b> and send the invite link (or the 4-letter code).</li>
+            <li>Your friend opens the link and you draft protocols together: 1-2-2-1.</li>
+            <li>The room creator's phone runs the game, so <b>keep it open in the foreground</b>. If a phone sleeps or switches networks, the game reconnects by itself. If the page reloads, use <b>Rejoin</b> on the menu.</li>
+        </ul>,
+    },
+    {
         title: 'Solo Deck Run',
         body: <>A solo challenge adapted from a fan variant on BoardGameGeek. Pick <b>any 3 protocols</b>. The AI gets <b>3 random</b> ones. Your deck is <b>never reshuffled</b>: the moment it runs dry and you'd need to draw, the run is over. Compile all 3 first. Drawing extra cards is now a real cost.</>,
     },

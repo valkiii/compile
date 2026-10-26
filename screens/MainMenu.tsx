@@ -12,17 +12,20 @@ import { isCustomProtocolEnabled, setCustomProtocolEnabled } from '../utils/cust
 import { hasSeenTutorial } from '../utils/tutorialProgress';
 
 interface MainMenuProps {
-  onNavigate: (screen: 'ProtocolSelection' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules' | 'Tutorial') => void;
+  onNavigate: (screen: 'ProtocolSelection' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules' | 'Tutorial' | 'OnlineLobby') => void;
   difficulty: Difficulty;
   setDifficulty: (difficulty: Difficulty) => void;
   useControl: boolean;
   onUseControlChange: (enabled: boolean) => void;
   gameMode: GameMode;
   setGameMode: (mode: GameMode) => void;
+  /** Room of an online game this device can rejoin (after a reload) */
+  resumableOnlineRoom?: string | null;
+  onResumeOnline?: () => void;
 }
 
 
-export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, onUseControlChange, gameMode, setGameMode }: MainMenuProps) {
+export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, onUseControlChange, gameMode, setGameMode, resumableOnlineRoom, onResumeOnline }: MainMenuProps) {
   const [showTutorialNudge] = useState(() => !hasSeenTutorial());
   const isSolo = gameMode === 'solo';
   const [decorativeCardRight, setDecorativeCardRight] = useState<CardData | null>(null);
@@ -89,6 +92,12 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
 
         <div className="main-menu-actions-container">
           <div className="main-menu-start-group">
+            {resumableOnlineRoom && onResumeOnline && (
+              <button className="tutorial-nudge online-resume" onClick={onResumeOnline}>
+                <span className="tutorial-nudge-title">Online game in progress</span>
+                <span>Rejoin room {resumableOnlineRoom} →</span>
+              </button>
+            )}
             {showTutorialNudge && (
               <button className="tutorial-nudge" onClick={() => onNavigate('Tutorial')}>
                 <span className="tutorial-nudge-title">New to Compile?</span>
@@ -126,6 +135,9 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
             </div>
             <button className="btn btn-start" onClick={() => onNavigate('ProtocolSelection')}>
               {isSolo ? 'Start Solo Run' : 'Start Game'}
+            </button>
+            <button className="btn btn-online" onClick={() => onNavigate('OnlineLobby')}>
+              Play a Friend Online
             </button>
           </div>
           <div className="main-menu-other-actions">
