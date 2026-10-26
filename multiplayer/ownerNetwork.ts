@@ -10,7 +10,7 @@ import { relayUrl } from './relayClient';
 
 let pending: Promise<boolean> | null = null;
 
-export function checkOwnerNetwork(timeoutMs = 4000): Promise<boolean> {
+export function checkOwnerNetwork(timeoutMs = 9000): Promise<boolean> {
     if (pending) return pending;
     pending = new Promise<boolean>(resolve => {
         let settled = false;

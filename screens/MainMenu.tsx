@@ -32,9 +32,16 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
   const [onOwnerNetwork, setOnOwnerNetwork] = useState(false);
   useEffect(() => {
     let alive = true;
-    checkOwnerNetwork().then(ok => alive && setOnOwnerNetwork(ok));
+    const check = () => checkOwnerNetwork().then(ok => alive && setOnOwnerNetwork(ok));
+    check();
+    // Re-check when the app comes back (e.g. after switching Tailscale on)
+    const onVisible = () => document.visibilityState === 'visible' && check();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', check);
     return () => {
       alive = false;
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', check);
     };
   }, []);
   const isSolo = gameMode === 'solo';
