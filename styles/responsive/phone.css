@@ -792,6 +792,11 @@
         top: calc(4px + var(--i) * min(var(--stack-offset), (100cqh - var(--card-h) - 8px) / max(var(--n, 1) - 1, 1)));
     }
 
+    .game-screen.compact .opponent-side .lane-stack .card-component {
+        top: auto;
+        bottom: calc(4px + (var(--n, 1) - 1 - var(--i)) * min(var(--stack-offset), (100cqh - var(--card-h) - 8px) / max(var(--n, 1) - 1, 1)));
+    }
+
     /* Compact card faces: header readable, body small (tap for the detail sheet) */
     .game-screen.compact .lane-stack .card-component,
     .game-screen.compact .player-hand-area .card-component.in-hand {

@@ -125,10 +125,11 @@
     flex-direction: row;
 }
 
-/* Opponent is rotated 180°, so use row-reverse to keep DeckTrashArea on LEFT after rotation */
-.opponent-side {
-    transform: rotate(180deg);
-    flex-direction: row-reverse;
+/* The opponent's side is drawn upright (readable). Its stacks hang towards the protocol bar:
+   the newest (uncovered) card is nearest the centre and every covered card shows its header. */
+.opponent-side .lane-stack .card-component {
+    top: auto;
+    bottom: calc((var(--n, 1) - 1 - var(--i)) * var(--stack-offset));
 }
 
 .player-side.active-turn .lanes {
@@ -139,9 +140,6 @@
     background-color: hsla(360, 100%, 67%, 0.04);
 }
 
-.opponent-side .lanes {
-    flex-direction: row-reverse;
-}
 
 .lanes {
     display: flex;
@@ -576,10 +574,6 @@
     border-radius: 10px;
 }
 
-/* Opponent side is rotated 180°, so counter-rotate the DeckTrashArea content */
-.deck-trash-area.opponent {
-    transform: rotate(180deg);
-}
 
 .deck-pile, .trash-pile {
     display: flex;

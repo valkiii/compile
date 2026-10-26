@@ -395,7 +395,9 @@ function getDOMPosition(position: CardPosition): DOMRect | null {
                                 ? Math.abs(lastCardRect.top - cards[cards.length - 2].getBoundingClientRect().top)
                                 : 0;
                             const offset = realOffset > 0 ? Math.min(realOffset, dims.stackOffset) : dims.stackOffset;
-                            const newTop = lastCardRect.top + (offsetDirection * offset);
+                            // Opponent stacks are anchored at the protocol bar: the new card takes the
+                            // bottom slot (where the current top card is) and the others move up
+                            const newTop = isOpponent ? lastCardRect.top : lastCardRect.top + (offsetDirection * offset);
                             return new DOMRect(centerX, newTop, dims.width, dims.height);
                         }
 
