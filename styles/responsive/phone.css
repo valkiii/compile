@@ -254,6 +254,68 @@
     opacity: 0.7;
 }
 
+/* Card text list (phone protocol picker, online draft) */
+.protocol-text-close {
+    float: right;
+    min-width: 36px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--surface-hover);
+    background: var(--background-color);
+    color: var(--secondary-color);
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.protocol-text-list {
+    --accent: var(--card-custom-color, var(--primary-color));
+    border: 1px solid var(--surface-hover);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    background: var(--surface-color);
+    padding: 10px;
+}
+
+.protocol-text-list h4 {
+    font-family: 'Orbitron', sans-serif;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+
+.protocol-text-row {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 8px;
+    padding: 6px 0;
+    border-top: 1px solid var(--surface-hover);
+}
+
+.protocol-text-value {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--accent);
+    text-align: center;
+}
+
+.protocol-text-commands {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+.protocol-text-commands .emphasis {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.protocol-text-commands .muted {
+    color: var(--secondary-color);
+}
+
+
 /* Rotate-your-phone notice (phone held sideways) */
 .rotate-overlay {
     position: fixed;
@@ -316,6 +378,12 @@
         overflow-x: hidden;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+    }
+
+    /* Sections keep their natural height and the screen scrolls; without this, real iOS
+       browsers squeeze them to fit the window and clip their content */
+    .screen > *:not(.modal-overlay):not(.card-detail-sheet):not(.toaster-container) {
+        flex-shrink: 0;
     }
 
     h1 { font-size: 1.9rem; }
@@ -494,6 +562,19 @@
         width: 100%;
         padding: 10px !important;
         gap: 0.6rem !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        flex-shrink: 0;
+    }
+
+    .protocol-selection-layout > *,
+    .player-protocols-area,
+    .opponent-protocols-area {
+        flex-shrink: 0;
+        max-height: none !important;
+        overflow: visible !important;
     }
 
     .protocol-grid-container > p {
@@ -527,14 +608,10 @@
         font-size: 0.5rem !important;
     }
 
-    /* Confirm sticks to the bottom where the thumb is */
     .protocol-grid-container > .btn {
-        position: sticky;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-        z-index: 5;
+        position: static;
         width: 100%;
         background: var(--surface-color);
-        box-shadow: 0 -6px 18px rgba(10, 5, 26, 0.9);
     }
 
     .protocol-grid-container > .btn:not(:disabled) {
@@ -547,54 +624,6 @@
         padding: 0 !important;
         gap: 0.75rem;
         align-items: stretch !important;
-    }
-
-    .protocol-text-list {
-        --accent: var(--card-custom-color, var(--primary-color));
-        border: 1px solid var(--surface-hover);
-        border-left: 4px solid var(--accent);
-        border-radius: 10px;
-        background: var(--surface-color);
-        padding: 10px;
-    }
-
-    .protocol-text-list h4 {
-        font-family: 'Orbitron', sans-serif;
-        color: var(--accent);
-        margin-bottom: 6px;
-    }
-
-    .protocol-text-row {
-        display: grid;
-        grid-template-columns: 26px 1fr;
-        gap: 8px;
-        padding: 6px 0;
-        border-top: 1px solid var(--surface-hover);
-    }
-
-    .protocol-text-value {
-        font-family: 'Orbitron', sans-serif;
-        font-weight: 700;
-        font-size: 1.1rem;
-        color: var(--accent);
-        text-align: center;
-    }
-
-    .protocol-text-commands {
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-        font-size: 0.8rem;
-        line-height: 1.35;
-    }
-
-    .protocol-text-commands .emphasis {
-        color: var(--primary-color);
-        font-weight: 600;
-    }
-
-    .protocol-text-commands .muted {
-        color: var(--secondary-color);
     }
 
     /* ---------- Results ---------- */

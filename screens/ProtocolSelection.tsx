@@ -40,6 +40,8 @@ const SOLO_STEPS = [
 export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: ProtocolSelectionProps) {
   const SELECTION_STEPS = mode === 'solo' ? SOLO_STEPS : DRAFT_STEPS;
   const isCompact = useIsCompact();
+  // Phone: card text lists the player has closed (reopened by tapping the protocol again)
+  const [hiddenLists, setHiddenLists] = useState<Set<string>>(new Set());
   const [step, setStep] = useState(0);
   const [playerProtocols, setPlayerProtocols] = useState<string[]>([]);
   const [opponentProtocols, setOpponentProtocols] = useState<string[]>([]);
@@ -174,6 +176,20 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
     if (protocolCards.length > 0) {
       setPreviewCard(protocolCards[0]);
     }
+
+    setHiddenLists(prev => {
+      if (!prev.has(protocol)) return prev;
+      const next = new Set(prev);
+      next.delete(protocol);
+      return next;
+    });
+
+    setHiddenLists(prev => {
+      if (!prev.has(protocol)) return prev;
+      const next = new Set(prev);
+      next.delete(protocol);
+      return next;
+    });
 
     setCurrentSelection(prev => {
       // If the clicked protocol is already selected, deselect it.
@@ -417,9 +433,14 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
       </div>
 
       <div className="selected-protocol-cards-container">
-        {isCompact && selectedProtocolsWithCards.length > 0 && [...selectedProtocolsWithCards].reverse().map(proto => (
+        {isCompact && selectedProtocolsWithCards.length > 0 && [...selectedProtocolsWithCards].reverse().filter(proto => !hiddenLists.has(proto.name)).map(proto => (
             // Phone: card art is too small to read, so list each card's commands as text
             <div key={proto.name} className="protocol-text-list" style={getProtocolStyle(proto.name)}>
+              <button
+                className="protocol-text-close"
+                aria-label={`Hide ${proto.name} cards`}
+                onClick={() => setHiddenLists(prev => new Set(prev).add(proto.name))}
+              >✕</button>
               <h4>{proto.name}</h4>
               {proto.cards.map(card => (
                 <div key={`${proto.name}-${card.value}`} className="protocol-text-row">
