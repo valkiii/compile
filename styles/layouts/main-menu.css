@@ -272,3 +272,12 @@
 .main-menu > * {
   flex-shrink: 0;
 }
+
+/* The card ticker sits below the menu in the page flow (it used to be pinned to the
+   window bottom and covered the buttons on shorter screens) */
+.main-menu .card-ticker-container {
+  position: relative;
+  bottom: auto;
+  margin-top: auto;
+  padding: 1rem 0 0.5rem;
+}
