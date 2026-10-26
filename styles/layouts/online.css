@@ -241,3 +241,19 @@
     border-radius: 8px;
     padding: 0.4rem 0.75rem;
 }
+
+.owner-setup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.online-link-button {
+    background: none;
+    border: none;
+    color: var(--secondary-color);
+    font: inherit;
+    font-size: 0.75rem;
+    text-decoration: underline;
+    cursor: pointer;
+}

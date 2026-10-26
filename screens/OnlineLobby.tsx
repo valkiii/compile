@@ -8,7 +8,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Header } from '../components/Header';
-import { RelayClient, Role, getOwnerKey } from '../multiplayer/relayClient';
+import { RelayClient, Role, getOwnerKey, setOwnerKey } from '../multiplayer/relayClient';
+import { checkOwnerNetwork } from '../multiplayer/ownerNetwork';
 import { formatInviteCode, inviteLink, parseInvite } from '../multiplayer/invite';
 import '../styles/layouts/online.css';
 
@@ -30,7 +31,18 @@ const ERRORS: Record<string, string> = {
 };
 
 export function OnlineLobby({ initialInvite, onReady, onBack }: OnlineLobbyProps) {
-    const isOwner = !!getOwnerKey();
+    const [isOwner, setIsOwner] = useState(!!getOwnerKey());
+    // Owner key entry is only offered on the owner's tailnet (where rooms can be created)
+    const [onTailnet, setOnTailnet] = useState(false);
+    const [keyInput, setKeyInput] = useState('');
+    const [keyCopied, setKeyCopied] = useState(false);
+    useEffect(() => {
+        let alive = true;
+        checkOwnerNetwork().then(ok => alive && setOnTailnet(ok));
+        return () => {
+            alive = false;
+        };
+    }, []);
     const clientRef = useRef<RelayClient | null>(null);
     const handedOver = useRef(false);
     const [view, setView] = useState<'choose' | 'hosting' | 'joining'>(initialInvite || !isOwner ? 'joining' : 'choose');
@@ -54,6 +66,13 @@ export function OnlineLobby({ initialInvite, onReady, onBack }: OnlineLobbyProps
             if (event.type === 'error') {
                 setError(ERRORS[event.code] ?? `Error: ${event.code}`);
                 setJoining(false);
+                if (event.code === 'not_allowed' && role === 'host') {
+                    // Wrong key stored on this device: forget it and offer the key field again
+                    setOwnerKey(null);
+                    setIsOwner(false);
+                    setView('joining');
+                    setError('That owner key was not accepted by your server. Check it and enter it again.');
+                }
             }
             if (event.type === 'peer' && event.connected && client.session && !handedOver.current) {
                 handedOver.current = true;
@@ -84,6 +103,31 @@ export function OnlineLobby({ initialInvite, onReady, onBack }: OnlineLobbyProps
     useEffect(() => {
         if (initialInvite) joinWith(formatInviteCode(initialInvite.room, initialInvite.invite));
     }, []);
+
+    const saveOwnerKey = () => {
+        const key = keyInput.trim().replace(/^.*#owner=/, '');
+        if (key.length < 24) {
+            setError('The owner key is the long text after OWNER_KEY= (or paste your whole owner link).');
+            return;
+        }
+        setOwnerKey(key);
+        setIsOwner(true);
+        setKeyInput('');
+        setError(null);
+        setView('choose');
+    };
+
+    const copyOwnerKey = async () => {
+        const key = getOwnerKey();
+        if (!key) return;
+        try {
+            await navigator.clipboard.writeText(key);
+            setKeyCopied(true);
+            setTimeout(() => setKeyCopied(false), 2500);
+        } catch {
+            // clipboard blocked
+        }
+    };
 
     const createRoom = () => {
         const ownerKey = getOwnerKey();
@@ -124,6 +168,11 @@ export function OnlineLobby({ initialInvite, onReady, onBack }: OnlineLobbyProps
                     <button className="btn btn-start" onClick={createRoom}>Create room</button>
                     <div className="online-divider"><span>or</span></div>
                     <button className="btn" onClick={() => setView('joining')}>Join with an invite</button>
+                    {onTailnet && (
+                        <button className="online-link-button" onClick={copyOwnerKey}>
+                            {keyCopied ? 'Owner key copied: paste it on your other device' : 'Copy owner key (to set up another device)'}
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -144,7 +193,29 @@ export function OnlineLobby({ initialInvite, onReady, onBack }: OnlineLobbyProps
 
             {view === 'joining' && (
                 <div className="online-card">
-                    {!isOwner && !initialInvite && (
+                    {!isOwner && !initialInvite && onTailnet && (
+                        <div className="owner-setup">
+                            <p className="online-intro">
+                                To <b>create</b> rooms on this device, enter your owner key once. Home-screen apps keep their own storage,
+                                so the app needs the key even if Safari already has it.
+                            </p>
+                            <input
+                                className="online-code-input online-code-input-long"
+                                type="password"
+                                value={keyInput}
+                                placeholder="Owner key or owner link"
+                                autoComplete="off"
+                                autoCapitalize="off"
+                                autoCorrect="off"
+                                spellCheck={false}
+                                onChange={e => setKeyInput(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && saveOwnerKey()}
+                            />
+                            <button className="btn btn-start" onClick={saveOwnerKey} disabled={!keyInput.trim()}>Save owner key</button>
+                            <div className="online-divider"><span>or join a friend&apos;s room</span></div>
+                        </div>
+                    )}
+                    {!isOwner && !initialInvite && !onTailnet && (
                         <p className="online-intro">Online games are invite-only. Open the invite link you received, or paste it here.</p>
                     )}
                     <label className="online-label" htmlFor="invite-code">Invite link or code</label>
