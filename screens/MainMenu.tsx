@@ -10,6 +10,7 @@ import { shuffleDeck } from '../utils/gameLogic';
 import { Difficulty, GameMode } from '../types';
 import { isCustomProtocolEnabled, setCustomProtocolEnabled } from '../utils/customProtocolSettings';
 import { hasSeenTutorial } from '../utils/tutorialProgress';
+import { checkOwnerNetwork } from '../multiplayer/ownerNetwork';
 
 interface MainMenuProps {
   onNavigate: (screen: 'ProtocolSelection' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules' | 'Tutorial' | 'OnlineLobby') => void;
@@ -27,6 +28,15 @@ interface MainMenuProps {
 
 export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, onUseControlChange, gameMode, setGameMode, resumableOnlineRoom, onResumeOnline }: MainMenuProps) {
   const [showTutorialNudge] = useState(() => !hasSeenTutorial());
+  // Online play is only offered on the owner's own devices (on the tailnet); guests use invite links
+  const [onOwnerNetwork, setOnOwnerNetwork] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    checkOwnerNetwork().then(ok => alive && setOnOwnerNetwork(ok));
+    return () => {
+      alive = false;
+    };
+  }, []);
   const isSolo = gameMode === 'solo';
   const [decorativeCardRight, setDecorativeCardRight] = useState<CardData | null>(null);
   const [previewCard, setPreviewCard] = useState<CardData | null>(null);
@@ -136,9 +146,11 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
             <button className="btn btn-start" onClick={() => onNavigate('ProtocolSelection')}>
               {isSolo ? 'Start Solo Run' : 'Start Game'}
             </button>
-            <button className="btn btn-online" onClick={() => onNavigate('OnlineLobby')}>
-              Play a Friend Online
-            </button>
+            {onOwnerNetwork && (
+              <button className="btn btn-online" onClick={() => onNavigate('OnlineLobby')}>
+                Play a Friend Online
+              </button>
+            )}
           </div>
           <div className="main-menu-other-actions">
             <button className="btn" onClick={() => onNavigate('Tutorial')}>

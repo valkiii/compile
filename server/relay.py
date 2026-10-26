@@ -6,7 +6,9 @@ Pairs two browsers in a room and forwards messages between them. The game itself
 the host's browser; this server only knows rooms, roles and tokens.
 
 Access control:
-  - Only the owner can open rooms: `create` must carry OWNER_KEY (set in the environment).
+  - Two listeners: the PUBLIC port (exposed with Tailscale Funnel) only lets guests join/rejoin;
+    the PRIVATE port (Tailscale Serve, tailnet-only) is the only place rooms can be created.
+  - Creating a room also needs OWNER_KEY (set in the environment).
   - Every room has its own random invite key; joining needs room code + invite key
     (both are in the invite link). Failed joins are rate-limited per client address.
   - Reconnecting uses per-role tokens handed out on create/join.
@@ -33,7 +35,8 @@ from collections import defaultdict, deque
 import websockets
 
 HOST = os.environ.get("RELAY_HOST", "127.0.0.1")
-PORT = int(os.environ.get("RELAY_PORT", "8795"))
+PORT = int(os.environ.get("RELAY_PORT", "8795"))                  # public (Funnel): join only
+PRIVATE_PORT = int(os.environ.get("RELAY_PRIVATE_PORT", "8796"))  # tailnet only: may create rooms
 OWNER_KEY = os.environ.get("OWNER_KEY", "")
 STATE_FILE = os.environ.get("RELAY_STATE", "")
 ALLOWED_ORIGINS = {
@@ -162,7 +165,15 @@ async def drop_if_silent(ws, state):
         await ws.close(code=4008, reason="timeout")
 
 
-async def handler(ws):
+async def public_handler(ws):
+    await handler(ws, private=False)
+
+
+async def private_handler(ws):
+    await handler(ws, private=True)
+
+
+async def handler(ws, private):
     global connections
     origin = ws.request.headers.get("Origin", "")
     if ALLOWED_ORIGINS and origin not in ALLOWED_ORIGINS:
@@ -208,6 +219,11 @@ async def handler(ws):
                 continue
 
             if t == "create":
+                if not private:
+                    # Rooms can only be opened from the owner's tailnet
+                    record_failure(addr)
+                    await send(ws, {"t": "error", "code": "not_allowed"})
+                    continue
                 if rate_limited(addr):
                     await send(ws, {"t": "error", "code": "rate_limited"})
                     continue
@@ -262,6 +278,11 @@ async def handler(ws):
                     record_failure(addr)
                     await send(ws, {"t": "error", "code": "rejoin_failed"})
                     continue
+                if want == "host" and not private:
+                    # The host only ever talks to the private (tailnet) listener
+                    record_failure(addr)
+                    await send(ws, {"t": "error", "code": "rejoin_failed"})
+                    continue
                 room, role = target, want
                 reply = {"t": "rejoined", "room": code, "role": role, "token": room.tokens[role]}
                 if role == "host":
@@ -309,8 +330,10 @@ async def main():
         log.warning("OWNER_KEY is not set: nobody can create rooms")
     load_state()
     asyncio.create_task(reaper())
-    async with websockets.serve(handler, HOST, PORT, max_size=MAX_MESSAGE, ping_interval=20, ping_timeout=40):
-        log.info("relay listening on %s:%d", HOST, PORT)
+    opts = dict(max_size=MAX_MESSAGE, ping_interval=20, ping_timeout=40)
+    async with websockets.serve(public_handler, HOST, PORT, **opts), \
+            websockets.serve(private_handler, HOST, PRIVATE_PORT, **opts):
+        log.info("relay listening on %s:%d (public, join only) and %s:%d (tailnet, create)", HOST, PORT, HOST, PRIVATE_PORT)
         await asyncio.Future()
 
 

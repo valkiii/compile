@@ -178,7 +178,7 @@ export function App() {
   const resumeOnline = useCallback(() => {
     const session = loadSavedSession();
     if (!session) return;
-    const client = new RelayClient();
+    const client = new RelayClient(session.role);
     client.resume(session);
     setOnline({ client, role: session.role });
     setGameMode('online');

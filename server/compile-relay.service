@@ -11,6 +11,7 @@ Group=compile-relay
 EnvironmentFile=/etc/compile-relay/relay.env
 Environment=RELAY_HOST=127.0.0.1
 Environment=RELAY_PORT=8795
+Environment=RELAY_PRIVATE_PORT=8796
 Environment=RELAY_ORIGINS=https://valkiii.github.io
 Environment=RELAY_STATE=/var/lib/compile-relay/rooms.json
 ExecStart=/opt/compile-relay/venv/bin/python /opt/compile-relay/relay.py

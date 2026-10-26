@@ -42,9 +42,9 @@ export function OnlineLobby({ initialInvite, onReady, onBack }: OnlineLobbyProps
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
 
-    const freshClient = () => {
+    const freshClient = (role: Role) => {
         if (clientRef.current && !handedOver.current) clientRef.current.dispose();
-        const client = new RelayClient();
+        const client = new RelayClient(role);
         client.on(event => {
             if (event.type === 'status') setConnected(event.connected);
             if (event.type === 'session') {
@@ -77,7 +77,7 @@ export function OnlineLobby({ initialInvite, onReady, onBack }: OnlineLobbyProps
             return;
         }
         setJoining(true);
-        freshClient().join(parsed.room, parsed.invite);
+        freshClient('guest').join(parsed.room, parsed.invite);
     };
 
     // Opened from an invite link: join right away
@@ -90,7 +90,7 @@ export function OnlineLobby({ initialInvite, onReady, onBack }: OnlineLobbyProps
         if (!ownerKey) return;
         setError(null);
         setView('hosting');
-        freshClient().create(ownerKey);
+        freshClient('host').create(ownerKey);
     };
 
     const link = room && invite ? inviteLink(room, invite) : '';

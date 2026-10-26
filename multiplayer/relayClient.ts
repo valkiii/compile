@@ -6,8 +6,9 @@
  * (server/relay.py behind Tailscale Funnel). Plain outbound secure WebSockets, so it works
  * on any network; no third-party services.
  *
- * Only devices holding the owner key can open rooms; guests join with room code + invite
- * key (both in the invite link). Handles reconnecting after network switches or the phone
+ * The relay has two doors: a tailnet-only one (Tailscale Serve) where the owner opens and
+ * hosts rooms (owner key required), and a public one (Tailscale Funnel) where guests can
+ * only join with room code + invite key (both in the invite link). Handles reconnecting after network switches or the phone
  * sleeping, and re-attaching to the room after a page reload (session in localStorage).
  */
 
@@ -28,18 +29,21 @@ export type RelayEvent =
     | { type: 'message'; data: unknown }
     | { type: 'error'; code: string };
 
-const DEFAULT_RELAY_URL = 'wss://pihole1.tail448243.ts.net:10000/compile-relay';
+const PUBLIC_RELAY_URL = 'wss://pihole1.tail448243.ts.net:10000/compile-relay';
+const PRIVATE_RELAY_URL = 'wss://pihole1.tail448243.ts.net:8796';
 const SESSION_KEY = 'compile_online_session';
 const OWNER_KEY_STORAGE = 'compile_owner_key';
 
-export function relayUrl(): string {
+/** Guests use the public door, the host the tailnet-only one. ?relay= / ?relayprivate= override for testing. */
+export function relayUrl(role: Role): string {
     try {
-        const fromQuery = new URLSearchParams(window.location.search).get('relay');
-        if (fromQuery) return fromQuery;
+        const params = new URLSearchParams(window.location.search);
+        const override = params.get(role === 'host' ? 'relayprivate' : 'relay');
+        if (override) return override;
     } catch {
         // ignore
     }
-    return DEFAULT_RELAY_URL;
+    return role === 'host' ? PRIVATE_RELAY_URL : PUBLIC_RELAY_URL;
 }
 
 /** The owner key lets this device open rooms. Set once by opening the site with ?owner=KEY. */
@@ -96,7 +100,10 @@ export class RelayClient {
     connected = false;
     peerConnected = false;
 
-    constructor(private url: string = relayUrl()) {
+    private url: string;
+
+    constructor(role: Role) {
+        this.url = relayUrl(role);
         document.addEventListener('visibilitychange', this.onWake);
         window.addEventListener('online', this.onWake);
     }
