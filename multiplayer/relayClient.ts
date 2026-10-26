@@ -4,7 +4,7 @@
  *
  * Online connection between the two phones, peer-to-peer over WebRTC (PeerJS).
  * No server of our own: the free public PeerJS broker only introduces the phones, then
- * they talk directly (PeerJS's default config also brings TURN relays for strict networks).
+ * they talk directly, or through the TURN relay in iceServers.ts when networks block that.
  *
  * The host registers the peer id derived from the room code; the guest connects to it.
  * Handles reconnecting after network switches or the phone sleeping, and re-attaching
@@ -12,6 +12,7 @@
  */
 
 import Peer, { DataConnection } from 'peerjs';
+import { iceServers } from './iceServers';
 
 export type Role = 'host' | 'guest';
 
@@ -81,6 +82,8 @@ export class RelayClient {
     private heartbeat: ReturnType<typeof setInterval> | null = null;
     private lastHeard = 0;
     private createAttempts = 0;
+    private joinAttempts = 0;
+    private connectTimer: ReturnType<typeof setTimeout> | null = null;
 
     session: OnlineSessionInfo | null = null;
     connected = false;      // registered with the broker (host) / have a peer object (guest)
@@ -104,6 +107,7 @@ export class RelayClient {
     join(room: string) {
         this.session = { room: room.toUpperCase().trim(), role: 'guest', token: randomToken() };
         this.joinedOnce = false;
+        this.joinAttempts = 0;
         this.startGuest();
     }
 
@@ -147,7 +151,7 @@ export class RelayClient {
     private startHost(fresh: boolean) {
         if (this.closed || !this.session) return;
         this.peer?.destroy();
-        const peer = new Peer(peerIdFor(this.session.room), { debug: 0 });
+        const peer = new Peer(peerIdFor(this.session.room), { debug: 0, config: { iceServers: iceServers() } });
         this.peer = peer;
 
         peer.on('open', () => {
@@ -187,7 +191,7 @@ export class RelayClient {
     private startGuest() {
         if (this.closed || !this.session) return;
         if (!this.peer || this.peer.destroyed) {
-            const peer = new Peer({ debug: 0 });
+            const peer = new Peer({ debug: 0, config: { iceServers: iceServers() } });
             this.peer = peer;
             peer.on('open', () => {
                 this.setConnected(true);
@@ -200,11 +204,12 @@ export class RelayClient {
             peer.on('error', err => {
                 const type = (err as { type?: string }).type;
                 if (type === 'peer-unavailable') {
-                    if (!this.joinedOnce) {
+                    // The host may just be in another app for a moment (iOS drops its registration):
+                    // retry a few times before telling a first-time joiner the room doesn't exist
+                    if (!this.joinedOnce && ++this.joinAttempts >= 5) {
                         this.emit({ type: 'error', code: 'no_room' });
                         return;
                     }
-                    // Host is away (reloading / asleep): keep trying
                     this.later(() => this.connectToHost(), 3000);
                     return;
                 }
@@ -227,6 +232,14 @@ export class RelayClient {
         if (this.conn?.open) return;
         const conn = this.peer.connect(peerIdFor(this.session.room), { reliable: true, serialization: 'binary' });
         this.attachConnection(conn);
+        // A connection that never opens (host suspended, blocked network path): drop it and retry
+        if (this.connectTimer) clearTimeout(this.connectTimer);
+        this.connectTimer = setTimeout(() => {
+            if (this.closed || conn.open || this.conn === conn) return;
+            conn.close();
+            if (!this.joinedOnce) this.emit({ type: 'error', code: 'slow_connect' });
+            this.later(() => this.connectToHost(), 1000);
+        }, 15000);
     }
 
     // ---------------------------------------------------------------- shared
@@ -256,6 +269,10 @@ export class RelayClient {
         });
         conn.on('close', () => this.onConnectionLost(conn));
         conn.on('error', () => this.onConnectionLost(conn));
+        // ICE failure = the two networks can't reach each other directly (and no relay helped)
+        conn.on('iceStateChanged', state => {
+            if (state === 'failed') this.emit({ type: 'error', code: 'ice_failed' });
+        });
     }
 
     private onEnvelope(conn: DataConnection, env: Envelope) {

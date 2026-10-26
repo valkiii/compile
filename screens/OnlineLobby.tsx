@@ -18,7 +18,9 @@ interface OnlineLobbyProps {
 }
 
 const ERRORS: Record<string, string> = {
-    no_room: 'No room with that code. Check it with your rival.',
+    no_room: 'No room with that code. Check the code, and make sure your rival has the game open on screen (not in another app).',
+    slow_connect: 'Still trying to reach your rival… Ask them to keep the game open on screen. Retrying.',
+    ice_failed: "Your two networks can't connect to each other directly. Try both phones on Wi-Fi (or one on Wi-Fi), then join again.",
     taken: 'That room already has two players.',
     network: 'Could not reach the matchmaking service. Check your connection.',
 };
@@ -39,7 +41,10 @@ export function OnlineLobby({ initialJoinCode, onReady, onBack }: OnlineLobbyPro
             client.on(event => {
                 if (event.type === 'status') setConnected(event.connected);
                 if (event.type === 'session') setRoom(event.session.room);
-                if (event.type === 'error') setError(ERRORS[event.code] ?? `Error: ${event.code}`);
+                if (event.type === 'error') {
+                    setError(ERRORS[event.code] ?? `Error: ${event.code}`);
+                    if (event.code === 'no_room' || event.code === 'ice_failed' || event.code === 'taken') setJoining(false);
+                }
                 if (event.type === 'peer' && event.connected && client.session && !handedOver.current) {
                     handedOver.current = true;
                     onReady(client, client.session.role);
@@ -66,11 +71,19 @@ export function OnlineLobby({ initialJoinCode, onReady, onBack }: OnlineLobbyPro
         getClient().create();
     };
 
+    const [joining, setJoining] = useState(!!initialJoinCode);
+
     const joinRoom = () => {
         setError(null);
         if (code.trim().length !== 4) {
             setError('Room codes have 4 characters.');
             return;
+        }
+        setJoining(true);
+        // Fresh client per attempt so a retry after an error starts clean
+        if (clientRef.current && !handedOver.current) {
+            clientRef.current.dispose();
+            clientRef.current = null;
         }
         getClient().join(code.trim());
     };
@@ -146,9 +159,19 @@ export function OnlineLobby({ initialJoinCode, onReady, onBack }: OnlineLobbyPro
                         onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                         onKeyDown={e => e.key === 'Enter' && joinRoom()}
                     />
-                    <button className="btn btn-start" onClick={joinRoom} disabled={code.length !== 4}>Join</button>
-                    {room && (
-                        <p className="online-waiting"><span className="online-status-dot" />Joined room {room}. Waiting for the host…</p>
+                    <button className="btn btn-start" onClick={joinRoom} disabled={code.length !== 4 || joining}>
+                        {joining ? 'Connecting…' : 'Join'}
+                    </button>
+                    {joining && (
+                        <p className="online-waiting">
+                            <span className="online-status-dot" />
+                            {connected ? `Looking for room ${code}…` : 'Reaching the matchmaking service…'}
+                        </p>
+                    )}
+                    {joining && (
+                        <button className="btn" onClick={() => { clientRef.current?.dispose(); clientRef.current = null; setJoining(false); setError(null); }}>
+                            Cancel
+                        </button>
                     )}
                 </div>
             )}
