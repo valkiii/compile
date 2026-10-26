@@ -43,7 +43,8 @@ export type OnlineMessage =
     | { k: 'action'; gameId: string; key: string; action: AIAction }
     | { k: 'sync' }
     | { k: 'end'; gameId: string; winner: Player }
-    | { k: 'rematch' };
+    | { k: 'rematch' }
+    | { k: 'chat'; id: string; text: string; at: number };
 
 export const isOnlineMessage = (data: unknown): data is OnlineMessage =>
     !!data && typeof data === 'object' && typeof (data as { k?: unknown }).k === 'string';

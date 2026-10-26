@@ -18,6 +18,7 @@ import { OnlineDraft } from './screens/OnlineDraft';
 import { RelayClient, Role, loadSavedSession } from './multiplayer/relayClient';
 import { OnlineGameSetup, isOnlineMessage } from './multiplayer/messages';
 import { clearHostGame, loadHostGame, saveHostGame } from './multiplayer/savedGame';
+import { OnlineChat } from './components/OnlineChat';
 import { CoinFlipModal } from './components/CoinFlipModal';
 import { Difficulty, GameMode, GameState } from './types';
 import { loadDefaultCustomProtocols } from './logic/customProtocols/loadDefaultProtocols';
@@ -372,5 +373,13 @@ export function App() {
     }
   };
 
-  return <>{renderScreen()}</>;
+  const chatRoom = online?.client.session?.room;
+  const showChat = !!online && !!chatRoom && (screen === 'OnlineDraft' || screen === 'GameScreen' || screen === 'ResultsScreen');
+
+  return (
+    <>
+      {renderScreen()}
+      {showChat && <OnlineChat key={chatRoom} client={online!.client} room={chatRoom!} inGame={screen === 'GameScreen'} />}
+    </>
+  );
 }
