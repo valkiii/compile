@@ -1,0 +1,10 @@
+# The relay only answers incoming connections; it never needs to open one.
+# Blocks it from reaching other local services (database, Marquee, Pi-hole...) even if compromised.
+table inet compile_relay_egress
+delete table inet compile_relay_egress
+table inet compile_relay_egress {
+    chain output {
+        type filter hook output priority filter; policy accept;
+        meta skuid "compile-relay" ct state new counter drop comment "compile-relay may not open connections"
+    }
+}

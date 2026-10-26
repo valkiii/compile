@@ -36,3 +36,15 @@ Turn off: `sudo tailscale funnel --https=10000 --set-path=/compile-relay off`,
 `sudo tailscale serve --https=8796 off` and
 `sudo systemctl disable --now compile-relay`.
 Rotate the owner key: edit relay.env, `sudo systemctl restart compile-relay`, open the new owner link.
+
+Extra hardening on pihole1 (files in `pi-hardening/`)
+- `compile-relay-egress.nft` → `/etc/compile-relay/egress.nft`, loaded by the drop-in
+  `compile-relay.service.d/egress.conf`: the relay's account may not open any new
+  connection (it can only answer), so even a compromised relay can't reach other local
+  services (database, Marquee, Pi-hole …).
+- Footfall (the portfolio visit logger, also public via Funnel) got the same treatment:
+  `footfall.service.d/hardening.conf` (sees only its script + database folder, no
+  privileges, localhost/tailnet-only networking) and `footfall-egress.nft` →
+  `/etc/footfall/egress.nft` (no outgoing connections). Exposure 9.2 → 1.2.
+- Undo: delete the drop-in `.conf` files, `sudo systemctl daemon-reload`, restart the
+  services, and `sudo nft delete table inet compile_relay_egress` / `… footfall_egress`.

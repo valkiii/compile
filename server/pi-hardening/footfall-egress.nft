@@ -1,0 +1,10 @@
+# Footfall only answers incoming requests; it never needs to open a connection.
+# Loaded after the service starts (the cgroup must exist for the match).
+table inet footfall_egress
+delete table inet footfall_egress
+table inet footfall_egress {
+    chain output {
+        type filter hook output priority filter; policy accept;
+        socket cgroupv2 level 2 "system.slice/footfall.service" ct state new counter drop comment "footfall may not open connections"
+    }
+}
