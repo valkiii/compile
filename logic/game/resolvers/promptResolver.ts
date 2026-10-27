@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { processReactiveEffects } from '../reactiveEffectProcessor';
 import { GameState, Player, GamePhase, PlayedCard, EffectContext } from '../../../types';
 import { log, setLogSource, setLogPhase, increaseLogIndent, decreaseLogIndent } from '../../utils/log';
 import { findAndFlipCards, drawForPlayer } from '../../../utils/gameStateModifiers';
@@ -414,7 +415,7 @@ export const resolveOptionalEffectPrompt = (prevState: GameState, accept: boolea
 // REMOVED: resolveLight2Prompt - Light-2 now uses custom protocol system with prompt_shift_or_flip_board_card_custom
 // REMOVED: resolveOptionalDiscardDeckTopPrompt - Clarity-1 now uses conditional.thenEffect with useCardFromPreviousEffect
 
-export const resolveRearrangeProtocols = (
+const rearrangeProtocolsInternal = (
     prevState: GameState,
     newOrder: string[],
     onEndGame: (winner: Player, finalState: GameState) => void
@@ -550,7 +551,7 @@ export const resolveRearrangeProtocols = (
 // REMOVED: resolveSpirit1Prompt - Spirit-1 now uses custom protocol with custom_choice
 // REMOVED: resolveSpirit3Prompt - Spirit-3 now uses custom protocol system with after_draw trigger
 
-export const resolveSwapProtocols = (prevState: GameState, indices: [number, number], onEndGame: (winner: Player, finalState: GameState) => void): GameState => {
+const swapProtocolsInternal = (prevState: GameState, indices: [number, number], onEndGame: (winner: Player, finalState: GameState) => void): GameState => {
     if (prevState.actionRequired?.type !== 'prompt_swap_protocols') return prevState;
     
     const { actor, target, originalAction, sourceCardId } = prevState.actionRequired;
@@ -599,7 +600,8 @@ export const resolveSwapProtocols = (prevState: GameState, indices: [number, num
 
     const actorName = actor.charAt(0).toUpperCase() + actor.slice(1);
     const targetName = target.charAt(0).toUpperCase() + target.slice(1);
-    const sourceText = sourceCardId === 'CONTROL_MECHANIC' ? 'Control' : 'Spirit-4';
+    const sourceCard = findCardOnBoard(newState, sourceCardId)?.card;
+    const sourceText = sourceCardId === 'CONTROL_MECHANIC' ? 'Control' : sourceCard ? `${sourceCard.protocol}-${sourceCard.value}` : 'Effect';
     newState = log(newState, actor, `${sourceText}: ${actorName} swaps ${targetName}'s protocols ${newProtocols[index2]} and ${newProtocols[index1]}.`);
 
     if (sourceCardId === 'CONTROL_MECHANIC') {
@@ -620,6 +622,20 @@ export const resolveSwapProtocols = (prevState: GameState, indices: [number, num
 
     return stateAfterRecalc;
 };
+
+/** Main 3: "After a player rearranges protocols" (Momentum-1, Nova-2). Swaps count as rearranging. */
+function afterRearrange(prevState: GameState, result: GameState): GameState {
+    if (result === prevState || result.winner || result.actionRequired) return result;
+    const actor = (prevState.actionRequired as any)?.actor as Player | undefined;
+    if (!actor) return result;
+    return processReactiveEffects(result, 'after_rearrange', { player: actor }).newState;
+}
+
+export const resolveRearrangeProtocols = (prevState: GameState, newOrder: string[], onEndGame: (winner: Player, finalState: GameState) => void): GameState =>
+    afterRearrange(prevState, rearrangeProtocolsInternal(prevState, newOrder, onEndGame));
+
+export const resolveSwapProtocols = (prevState: GameState, indices: [number, number], onEndGame: (winner: Player, finalState: GameState) => void): GameState =>
+    afterRearrange(prevState, swapProtocolsInternal(prevState, indices, onEndGame));
 
 /**
  * NEW: Resolve Custom Protocol Reveal Board Card Prompt

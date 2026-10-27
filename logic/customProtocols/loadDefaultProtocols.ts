@@ -36,6 +36,23 @@ import peaceCustomData from '../../custom_protocols/peace_custom_protocol.json';
 import timeCustomData from '../../custom_protocols/time_custom_protocol.json';
 import unityCustomData from '../../custom_protocols/unity_custom_protocol.json';
 import warCustomData from '../../custom_protocols/war_custom_protocol.json';
+// Main 3
+import envyCustomData from '../../custom_protocols/envy_custom_protocol.json';
+import gluttonyCustomData from '../../custom_protocols/gluttony_custom_protocol.json';
+import greedCustomData from '../../custom_protocols/greed_custom_protocol.json';
+import lustCustomData from '../../custom_protocols/lust_custom_protocol.json';
+import prideCustomData from '../../custom_protocols/pride_custom_protocol.json';
+import slothCustomData from '../../custom_protocols/sloth_custom_protocol.json';
+import wrathCustomData from '../../custom_protocols/wrath_custom_protocol.json';
+import ambushCustomData from '../../custom_protocols/ambush_custom_protocol.json';
+import fulcrumCustomData from '../../custom_protocols/fulcrum_custom_protocol.json';
+import overwhelmCustomData from '../../custom_protocols/overwhelm_custom_protocol.json';
+import momentumCustomData from '../../custom_protocols/momentum_custom_protocol.json';
+import novaCustomData from '../../custom_protocols/nova_custom_protocol.json';
+
+const MAIN3_DATA = [
+    envyCustomData, gluttonyCustomData, greedCustomData, lustCustomData, prideCustomData, slothCustomData, wrathCustomData, ambushCustomData, fulcrumCustomData, overwhelmCustomData, momentumCustomData, novaCustomData
+];
 
 /**
  * All default custom protocol data for statistics tracking
@@ -48,7 +65,8 @@ const allDefaultCustomProtocolData = [
     lightCustomData, speedCustomData, metalCustomData, plagueCustomData,
     loveCustomData, psychicCustomData, smokeCustomData, clarityCustomData,
     corruptionCustomData, courageCustomData, fearCustomData, iceCustomData,
-    luckCustomData, mirrorCustomData, peaceCustomData, timeCustomData, unityCustomData, warCustomData
+    luckCustomData, mirrorCustomData, peaceCustomData, timeCustomData, unityCustomData, warCustomData,
+    ...MAIN3_DATA
 ];
 
 /**
@@ -110,6 +128,7 @@ export const loadDefaultCustomProtocols = (): void => {
         addCustomProtocol(timeCustomData as any);
         addCustomProtocol(unityCustomData as any);
         addCustomProtocol(warCustomData as any);
+        MAIN3_DATA.forEach(data => addCustomProtocol(data as any));
     } catch (error) {
         console.error('[Default Protocols] Error loading default protocols:', error);
     }

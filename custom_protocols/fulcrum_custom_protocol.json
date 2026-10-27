@@ -1,0 +1,217 @@
+{
+  "id": "fulcrum-main3-001",
+  "name": "Fulcrum",
+  "description": "Draw, swap, cards in hand.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#5E8CB8",
+  "pattern": "diagonal-lines",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [
+        {
+          "id": "fulcrum-0-top",
+          "params": {
+            "action": "discard",
+            "count": 2,
+            "actor": "opponent"
+          },
+          "position": "top",
+          "trigger": "start",
+          "condition": {
+            "type": "hand_exactly",
+            "value": 0
+          }
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "fulcrum-0-mid",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "opponent"
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "hand_exactly",
+            "value": 0
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "<div><span class='emphasis'>Start:</span> If you have exactly 0 cards in hand, your opponent discards 2 cards.</div>",
+        "middle": "If you have exactly 0 cards in hand, your opponent discards 1 card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 1,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "fulcrum-1-mid",
+          "params": {
+            "action": "flip",
+            "count": "all",
+            "optional": false,
+            "scope": "anywhere",
+            "targetFilter": {
+              "owner": "any",
+              "position": "any",
+              "faceState": "face_up",
+              "excludeSelf": true
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "fulcrum-1-mid-swap",
+              "params": {
+                "action": "swap_stacks",
+                "target": "own",
+                "fixedLanes": [
+                  0,
+                  2
+                ]
+              },
+              "position": "middle",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Flip each other face-up card. Swap your left stack with your right stack.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "fulcrum-2-mid",
+          "params": {
+            "action": "delete",
+            "count": 1,
+            "targetFilter": {
+              "position": "uncovered",
+              "faceState": "any",
+              "owner": "opponent"
+            },
+            "excludeSelf": false
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "hand_exactly",
+            "value": 2
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "If you have exactly 2 cards in hand, delete 1 of your opponent's cards.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "fulcrum-3-mid",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "fulcrum-3-mid-swap",
+              "params": {
+                "action": "swap_protocols",
+                "target": "own",
+                "fixedLanes": [
+                  0,
+                  2
+                ]
+              },
+              "position": "middle",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Draw 1 card. Swap the positions of your left and right protocols.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "fulcrum-4-mid",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "hand_exactly",
+            "value": 4
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "If you have exactly 4 cards in hand, draw 1 card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "fulcrum-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

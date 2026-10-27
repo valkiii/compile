@@ -29,7 +29,7 @@ interface OnlineDraftProps {
     onLeave: () => void;
 }
 
-const DEFAULT_OFF = ['Fan-Content', 'Main 2', 'Aux 2'];
+const DEFAULT_OFF = ['Fan-Content', 'Main 2', 'Main 3', 'Aux 2'];
 
 function useSystemCards(): CardData[] {
     return useMemo(() => {

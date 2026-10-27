@@ -1,0 +1,207 @@
+{
+  "id": "gluttony-main3-001",
+  "name": "Gluttony",
+  "description": "Draw, clear cache, delete.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#E0A526",
+  "pattern": "radial",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [
+        {
+          "id": "gluttony-0-top",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "any_line"
+            }
+          },
+          "position": "top",
+          "trigger": "after_clear_cache"
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "gluttony-0-mid",
+          "params": {
+            "action": "return",
+            "count": 1,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "excludeSelf": true
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "gluttony-0-mid-draw",
+              "params": {
+                "action": "draw",
+                "count": 1,
+                "target": "self",
+                "source": "own_deck"
+              },
+              "position": "middle",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "<div><span class='emphasis'>After you clear cache:</span> Play the top card of your deck face-down.</div>",
+        "middle": "Return 1 other card. Draw 1 card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 1,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "gluttony-1-mid",
+          "params": {
+            "action": "draw",
+            "count": 2,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "gluttony-1-bot",
+          "params": {
+            "action": "delete",
+            "count": 1,
+            "targetFilter": {
+              "position": "uncovered",
+              "faceState": "any"
+            },
+            "excludeSelf": false
+          },
+          "position": "bottom",
+          "trigger": "after_clear_cache",
+          "reactiveTriggerActor": "any"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "Draw 2 cards.",
+        "bottom": "<div><span class='emphasis'>After a player clears cache:</span> Delete 1 card.</div>"
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "gluttony-2-mid",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck",
+            "countType": "own_hand_size"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Draw cards equal to the number of cards in your hand.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [
+        {
+          "id": "gluttony-3-top",
+          "params": {
+            "action": "delete_covering_card"
+          },
+          "position": "top",
+          "trigger": "end"
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "gluttony-3-mid",
+          "params": {
+            "action": "draw",
+            "count": 2,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "<div><span class='emphasis'>End:</span> If this card is covered by a face-up card, delete that card.</div>",
+        "middle": "Draw 2 cards.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [],
+      "bottomEffects": [
+        {
+          "id": "gluttony-4-bot",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "bottom",
+          "trigger": "after_refresh"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "",
+        "bottom": "<div><span class='emphasis'>After you refresh:</span> Draw 1 card.</div>"
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "gluttony-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

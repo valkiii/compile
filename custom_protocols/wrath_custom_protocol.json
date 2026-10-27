@@ -1,0 +1,216 @@
+{
+  "id": "wrath-main3-001",
+  "name": "Wrath",
+  "description": "Delete, face-down.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#C8202B",
+  "pattern": "cross-diagonal",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [
+        {
+          "id": "wrath-0-top",
+          "params": {
+            "action": "value_modifier",
+            "modifier": {
+              "type": "ignore_highest_in_lane",
+              "value": 0,
+              "target": "all_cards",
+              "scope": "this_lane"
+            }
+          },
+          "position": "top",
+          "trigger": "passive"
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "wrath-0-mid",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "specific_lane",
+              "laneIndex": "current"
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "All cards with the highest value in this line do not add to a player's total value in this line.",
+        "middle": "Play the top card of your deck face-down in this stack.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 1,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "wrath-1-mid",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "wrath-1-bot",
+          "params": {
+            "action": "control",
+            "mode": "lose",
+            "who": "self"
+          },
+          "position": "bottom",
+          "trigger": "end",
+          "condition": {
+            "type": "self_has_control"
+          },
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "wrath-1-bot-delete",
+              "params": {
+                "action": "delete",
+                "count": 1,
+                "targetFilter": {
+                  "position": "uncovered",
+                  "faceState": "face_up"
+                },
+                "excludeSelf": false
+              },
+              "position": "bottom",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "Draw 1 card.",
+        "bottom": "<div><span class='emphasis'>End:</span> Lose control. If you did, delete 1 face-up card.</div>"
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "wrath-2-mid",
+          "params": {
+            "action": "flip_all_in_line"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Flip all face-up cards in a line with the most cards.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "wrath-3-mid",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "faceState": "face_up",
+              "excludeSelf": false
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Flip 1 face-up card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "wrath-4-mid",
+          "params": {
+            "action": "control",
+            "mode": "lose",
+            "who": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "self_has_control"
+          },
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "wrath-4-mid-discard",
+              "params": {
+                "action": "discard",
+                "count": 2,
+                "actor": "opponent"
+              },
+              "position": "middle",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Lose control. If you did, your opponent discards 2 cards.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "wrath-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

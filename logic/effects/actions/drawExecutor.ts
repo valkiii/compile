@@ -8,6 +8,7 @@
  * Extracted 1:1 from effectInterpreter.ts for modularity.
  */
 
+import { computeMain3Count } from '../../customProtocols/main3Rules';
 import { GameState, Player, PlayedCard, EffectResult, EffectContext, AnimationRequest } from '../../../types';
 import { log } from '../../utils/log';
 import { v4 as uuidv4 } from 'uuid';
@@ -319,10 +320,12 @@ export function executeDrawEffect(
         }
 
         case 'fixed':
-        default:
-            // Standard fixed count
-            count = params.count || 1;
+        default: {
+            // Main 3 counts (Envy-2, Gluttony-2, Pride-2, Sloth-0, ...), else the fixed count
+            const main3Count = computeMain3Count(countType, state, card, laneIndex, cardOwner);
+            count = main3Count ?? (params.count || 1);
             break;
+        }
     }
 
     // Prevent drawing 0 or negative cards

@@ -1,0 +1,211 @@
+{
+  "id": "greed-main3-001",
+  "name": "Greed",
+  "description": "Discard, repeating effects.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#B54AD8",
+  "pattern": "hexagons",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "greed-0-mid",
+          "params": {
+            "action": "discard",
+            "count": "all",
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "greed-0-mid-delete",
+              "params": {
+                "action": "delete",
+                "count": 1,
+                "targetFilter": {
+                  "position": "uncovered",
+                  "faceState": "any"
+                },
+                "excludeSelf": false
+              },
+              "position": "middle",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "greed-0-bot",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "bottom",
+          "trigger": "after_delete"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "Discard your hand. Delete 1 card.",
+        "bottom": "<div><span class='emphasis'>After you delete cards:</span> Draw 1 card.</div>"
+      }
+    },
+    {
+      "value": 1,
+      "topEffects": [],
+      "middleEffects": [],
+      "bottomEffects": [
+        {
+          "id": "greed-1-bot",
+          "params": {
+            "action": "compile_line"
+          },
+          "position": "bottom",
+          "trigger": "end"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "",
+        "bottom": "<div><span class='emphasis'>End:</span> Compile a line where you have at least 10 value and a higher total value than your opponent.</div>"
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "greed-2-mid",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "opponent"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "greed-2-bot",
+          "params": {
+            "action": "return",
+            "count": 1,
+            "optional": true,
+            "targetFilter": {
+              "owner": "own",
+              "position": "uncovered"
+            }
+          },
+          "position": "bottom",
+          "trigger": "start"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "Your opponent discards 1 card.",
+        "bottom": "<div><span class='emphasis'>Start:</span> You may return 1 of your cards.</div>"
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "greed-3-mid",
+          "params": {
+            "action": "shift",
+            "optional": false,
+            "targetFilter": {
+              "owner": "own",
+              "position": "covered",
+              "faceState": "any"
+            },
+            "scope": "this_lane"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Shift 1 of your covered cards in this stack.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "greed-4-mid",
+          "params": {
+            "action": "discard",
+            "count": "all",
+            "actor": "self",
+            "optional": true
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "conditional": {
+            "type": "if_executed",
+            "thenEffect": {
+              "id": "greed-4-mid-flip",
+              "params": {
+                "action": "flip",
+                "count": 1,
+                "optional": false,
+                "targetFilter": {
+                  "owner": "any",
+                  "position": "uncovered",
+                  "faceState": "any",
+                  "excludeSelf": false
+                }
+              },
+              "position": "middle",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "You may discard your hand. If you did, flip 1 card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "greed-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

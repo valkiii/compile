@@ -8,6 +8,7 @@
  * Extracted 1:1 from effectInterpreter.ts for modularity.
  */
 
+import { computeMain3Count } from '../../customProtocols/main3Rules';
 import { GameState, Player, PlayedCard, EffectResult, EffectContext } from '../../../types';
 import { log } from '../../utils/log';
 
@@ -227,6 +228,12 @@ export function executeDiscardEffect(
     // NEW: Handle dynamic discard count (Plague-2)
     let count = params.count || 1;
     const countType = params.countType || 'fixed';
+
+    const main3Count = computeMain3Count(countType, state, card, laneIndex, cardOwner);
+    if (main3Count !== undefined) {
+        // Nova-1: "Your opponent discards cards equal to the number of cards in this stack"
+        count = Math.min(main3Count, state[actor].hand.length);
+    }
 
     if (countType === 'equal_to_discarded') {
         // Use discardedCount from context (from previous discard in the chain)

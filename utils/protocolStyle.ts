@@ -55,6 +55,19 @@ const STYLES: Record<string, ProtocolStyle> = {
     unity:        { accent: 'hsl(122 56% 46%)', accent2: 'hsl(200 82% 56%)', motif: 'cross',   glyph: '◈' },
     war:          { accent: 'hsl(8 84% 46%)',   accent2: 'hsl(45 42% 58%)', motif: 'checker', glyph: '✠' },
     water:        { accent: 'hsl(206 82% 60%)', accent2: 'hsl(188 82% 86%)', motif: 'waves',   glyph: '≈' },
+    // Main 3
+    envy:         { accent: 'hsl(170 70% 46%)', accent2: 'hsl(205 85% 58%)', motif: 'rings',   glyph: '◆' },
+    gluttony:     { accent: 'hsl(42 88% 52%)',  accent2: 'hsl(20 80% 50%)', motif: 'bubbles', glyph: '☾' + T },
+    greed:        { accent: 'hsl(285 62% 58%)', accent2: 'hsl(165 60% 50%)', motif: 'grid',    glyph: '♛' + T },
+    lust:         { accent: 'hsl(356 78% 54%)', accent2: 'hsl(330 85% 70%)', motif: 'waves',   glyph: '❦' + T },
+    pride:        { accent: 'hsl(40 92% 58%)',  accent2: 'hsl(0 0% 98%)', motif: 'rays',    glyph: '♔' + T },
+    sloth:        { accent: 'hsl(215 8% 60%)',  accent2: 'hsl(12 70% 55%)', motif: 'hlines',  glyph: '◒' },
+    wrath:        { accent: 'hsl(356 80% 46%)', accent2: 'hsl(190 70% 55%)', motif: 'zigzag',  glyph: 'ϟ' },
+    ambush:       { accent: 'hsl(138 35% 50%)', accent2: 'hsl(48 70% 60%)', motif: 'checker', glyph: '◘' },
+    fulcrum:      { accent: 'hsl(208 40% 58%)', accent2: 'hsl(0 0% 95%)', motif: 'diag',    glyph: '⚖' + T },
+    overwhelm:    { accent: 'hsl(252 38% 68%)', accent2: 'hsl(320 60% 72%)', motif: 'grid',    glyph: '▦' },
+    momentum:     { accent: 'hsl(24 88% 56%)',  accent2: 'hsl(300 45% 72%)', motif: 'chevron', glyph: '➤' + T },
+    nova:         { accent: 'hsl(34 100% 56%)', accent2: 'hsl(8 85% 52%)', motif: 'rays',    glyph: '✹' },
 };
 
 export function protocolStyle(protocol: string): ProtocolStyle | null {

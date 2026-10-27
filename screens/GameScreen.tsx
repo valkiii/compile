@@ -4,6 +4,7 @@
  */
 
 // FIX: Import useState and useEffect from React, and fix malformed import.
+import { needsControlMechanic } from '../logic/customProtocols/main3Rules';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { CardComponent } from '../components/Card';
@@ -86,7 +87,7 @@ export interface OnlineGameProps {
 }
 
 // Prompts answered by choosing a lane (tapping anywhere in that lane, cards included)
-const LANE_SELECTION_ACTIONS = new Set<string>(['select_lane_for_shift', 'select_lane_for_shift_all', 'shift_flipped_card_optional', 'select_lane_for_play', 'select_lane_for_delete', 'select_lane_for_death_2', 'select_lane_for_life_3_play', 'select_lane_to_shift_revealed_card_for_light_2', 'select_lane_to_shift_revealed_board_card_custom', 'select_lane_to_shift_cards_for_light_3', 'select_lane_for_water_3', 'select_lane_for_metal_3_delete', 'select_lane_for_delete_all', 'select_lane_for_return', 'select_lanes_for_swap_stacks']);
+const LANE_SELECTION_ACTIONS = new Set<string>(['select_lane_custom', 'select_lane_for_shift', 'select_lane_for_shift_all', 'shift_flipped_card_optional', 'select_lane_for_play', 'select_lane_for_delete', 'select_lane_for_death_2', 'select_lane_for_life_3_play', 'select_lane_to_shift_revealed_card_for_light_2', 'select_lane_to_shift_revealed_board_card_custom', 'select_lane_to_shift_cards_for_light_3', 'select_lane_for_water_3', 'select_lane_for_metal_3_delete', 'select_lane_for_delete_all', 'select_lane_for_return', 'select_lanes_for_swap_stacks']);
 
 type PreviewState = {
   card: PlayedCard;
@@ -136,6 +137,8 @@ export function GameScreen(props: GameScreenProps) {
  * GameScreenContent - Main game screen content
  */
 function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtocols, difficulty, useControlMechanic, mode = 'standard', startingPlayer = 'player', initialScenarioSetup, online, hostChannel, coinToss }: GameScreenProps & { hostChannel: HostChannel | null }) {
+  // Main 3 protocols need the control mechanic
+  useControlMechanic = useControlMechanic || needsControlMechanic([...playerProtocols, ...opponentProtocols]);
   const isOnline = mode === 'online' && !!online;
   const isGuest = isOnline && online!.role === 'guest';
   const isCompact = useIsCompact();

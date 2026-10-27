@@ -1,0 +1,189 @@
+{
+  "id": "envy-main3-001",
+  "name": "Envy",
+  "description": "Catch up, flip.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#2BB5A0",
+  "pattern": "multi-radial",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [
+        {
+          "id": "envy-0-top",
+          "params": {
+            "action": "value_modifier",
+            "modifier": {
+              "type": "add_opponent_highest_in_lane",
+              "value": 0,
+              "target": "own_total",
+              "scope": "this_lane"
+            }
+          },
+          "position": "top",
+          "trigger": "passive"
+        }
+      ],
+      "middleEffects": [],
+      "bottomEffects": [],
+      "text": {
+        "top": "Your total value in this line is increased by the value of your opponent's highest value card in this line.",
+        "middle": "",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 1,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "envy-1-mid",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": true,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "faceState": "any",
+              "excludeSelf": false
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "opponent_has_control"
+          }
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "envy-1-bot",
+          "params": {
+            "action": "control",
+            "mode": "gain",
+            "who": "self"
+          },
+          "position": "bottom",
+          "trigger": "start",
+          "condition": {
+            "type": "opponent_has_control"
+          }
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "If your opponent has control, you may flip 1 card.",
+        "bottom": "<div><span class='emphasis'>Start:</span> If your opponent has control, gain control.</div>"
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "envy-2-mid",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck",
+            "countType": "opponent_hand_size"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Draw cards equal to the number of cards in your opponent's hand.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [],
+      "bottomEffects": [
+        {
+          "id": "envy-3-bot",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "specific_lane",
+              "laneIndex": "current"
+            }
+          },
+          "position": "bottom",
+          "trigger": "after_play",
+          "reactiveTriggerActor": "opponent",
+          "reactiveScope": "this_lane"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "",
+        "bottom": "<div><span class='emphasis'>After your opponent plays a card in this line:</span> Play the top card of your deck face-down in this line.</div>"
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "envy-4-mid",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "faceState": "any",
+              "excludeSelf": false
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "opponent_more_compiled"
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "If your opponent has more compiled protocols than you do, flip 1 card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "envy-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

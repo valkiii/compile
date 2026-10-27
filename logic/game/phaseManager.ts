@@ -12,6 +12,7 @@ import { log, setLogSource, setLogPhase, increaseLogIndent, decreaseLogIndent } 
 // NOTE: handleAnarchyConditionalDraw removed - old Anarchy-0 code is no longer used, custom protocol handles this
 import { getActivePassiveRules } from './passiveRuleChecker';
 import { executeCustomEffect } from '../customProtocols/effectInterpreter';
+import { processReactiveEffects } from './reactiveEffectProcessor';
 
 const checkControlPhase = (state: GameState): GameState => {
     if (!state.useControlMechanic) {
@@ -48,7 +49,9 @@ const checkControlPhase = (state: GameState): GameState => {
 
             const playerName = player === 'player' ? 'Player' : 'Opponent';
             newState = log(newState, player, `${playerName} gains the Control Component.`);
-            return { ...newState, controlCardHolder: player };
+            newState = { ...newState, controlCardHolder: player };
+            // Main 3: "After your opponent gains control" (Lust-4, Pride-6)
+            return processReactiveEffects(newState, 'after_opponent_gain_control', { player: opponent }).newState;
         }
     }
 

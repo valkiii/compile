@@ -1,0 +1,216 @@
+{
+  "id": "overwhelm-main3-001",
+  "name": "Overwhelm",
+  "description": "Play face-down, win more.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#9C8FC9",
+  "pattern": "grid",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 1,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "overwhelm-1-mid",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "each_line_where_higher"
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Play the top card of your deck face-down in each line where you have a higher total value than your opponent.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [
+        {
+          "id": "overwhelm-2-top",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "each_line"
+            }
+          },
+          "position": "top",
+          "trigger": "end",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "overwhelm-2-top-flip",
+              "params": {
+                "action": "flip",
+                "count": 1,
+                "optional": false,
+                "flipSelf": true,
+                "targetFilter": {
+                  "owner": "own",
+                  "position": "any",
+                  "faceState": "any",
+                  "excludeSelf": false
+                }
+              },
+              "position": "top",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "overwhelm-2-mid",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "each_line"
+            },
+            "actor": "opponent"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "<div><span class='emphasis'>End:</span> Play the top card of your deck face-down in each line. Flip this card.</div>",
+        "middle": "Your opponent plays the top card of their deck face-down in each line.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [],
+      "bottomEffects": [
+        {
+          "id": "overwhelm-3-bot",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "specific_lane",
+              "laneIndex": "current"
+            }
+          },
+          "position": "bottom",
+          "trigger": "end",
+          "condition": {
+            "type": "hand_at_least",
+            "value": 5
+          }
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "",
+        "bottom": "<div><span class='emphasis'>End:</span> If you have 5 or more cards in your hand, play the top card of your deck face-down in this stack.</div>"
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "overwhelm-4-mid",
+          "params": {
+            "action": "delete",
+            "count": 1,
+            "targetFilter": {
+              "position": "covered",
+              "faceState": "any",
+              "owner": "opponent",
+              "calculation": "lowest_value"
+            },
+            "excludeSelf": false
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "more_cards_in_play"
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "If you have more cards in play than your opponent, delete your opponent's lowest value covered card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "overwhelm-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 6,
+      "topEffects": [
+        {
+          "id": "overwhelm-6-top",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "flipSelf": true,
+            "targetFilter": {
+              "owner": "own",
+              "position": "any",
+              "faceState": "any",
+              "excludeSelf": false
+            }
+          },
+          "position": "top",
+          "trigger": "start",
+          "condition": {
+            "type": "opponent_higher_in_this_line"
+          }
+        }
+      ],
+      "middleEffects": [],
+      "bottomEffects": [],
+      "text": {
+        "top": "<div><span class='emphasis'>Start:</span> If your opponent has a higher total value in this line than you do, flip this card.</div>",
+        "middle": "",
+        "bottom": ""
+      }
+    }
+  ]
+}

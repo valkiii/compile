@@ -68,11 +68,16 @@ export type EffectTrigger =
     | 'after_opponent_refresh'  // After opponent refreshes (War-1)
     | 'after_compile'        // After you compile
     | 'after_opponent_compile' // After opponent compiles (War-2)
-    | 'after_shuffle';        // After shuffle_trash or shuffle_deck (Time-2)
+    | 'after_shuffle'         // After shuffle_trash or shuffle_deck (Time-2)
+    | 'after_rearrange'       // After protocols are rearranged or swapped (Momentum-1, Nova-2)
+    | 'after_opponent_gain_control'; // After your opponent gains control (Lust-4, Pride-6)
 
 export type TargetOwner = 'any' | 'own' | 'opponent';
 export type TargetPosition = 'any' | 'covered' | 'uncovered' | 'covered_in_this_line';
 export type TargetFaceState = 'any' | 'face_up' | 'face_down';
+
+/** Main 3 dynamic counts (see main3Rules.computeMain3Count) */
+export type Main3CountType = 'opponent_hand_size' | 'own_hand_size' | 'lines_with_higher_total' | 'lines_with_lower_total' | 'cards_in_this_stack' | 'equal_to_flipped';
 
 /**
  * Draw Effect Parameters
@@ -83,7 +88,7 @@ export interface DrawEffectParams {
     target: 'self' | 'opponent';
     source: 'own_deck' | 'opponent_deck';
     // NEW: Dynamic draw count types
-    countType?: 'fixed' | 'equal_to_card_value' | 'equal_to_discarded' | 'hand_size' | 'all_matching' | 'equal_to_unique_protocols_in_lane' | 'count_own_protocol_cards_on_field';  // 'all_matching' for Clarity-2/3, 'equal_to_unique_protocols_in_lane' for Diversity-1, 'count_own_protocol_cards_on_field' for Unity-2
+    countType?: 'fixed' | 'equal_to_card_value' | 'equal_to_discarded' | 'hand_size' | 'all_matching' | 'equal_to_unique_protocols_in_lane' | 'count_own_protocol_cards_on_field' | Main3CountType;  // 'all_matching' for Clarity-2/3, 'equal_to_unique_protocols_in_lane' for Diversity-1, 'count_own_protocol_cards_on_field' for Unity-2
     countOffset?: number;  // For Fire-4: "discard count + 1" → offset = 1
     conditional?: {
         type: 'count_face_down' | 'is_covering' | 'non_matching_protocols' | 'same_protocol_on_field';  // 'same_protocol_on_field' for Unity-0/Unity-3
@@ -127,6 +132,8 @@ export interface FlipEffectParams {
         excludeSelf: boolean;
         valueMinGreaterThanHandSize?: boolean;  // Peace-3: Target must have value > hand size
         valueLessThanUniqueProtocolsOnField?: boolean;  // Diversity-4: Target must have value < unique protocols count
+        valueLessThanStackSize?: boolean;  // Nova-4: value < cards in this stack
+        calculation?: 'highest_value' | 'lowest_value';  // Ambush-3
     };
     optional: boolean;  // "may flip" vs "flip"
     selfFlipAfter?: boolean;  // Flip this card after target flip
@@ -156,6 +163,8 @@ export interface ShiftEffectParams {
         position: 'uncovered' | 'covered' | 'any';
         faceState: TargetFaceState;
         excludeSelf?: boolean;  // NEW: For Anarchy-1 "shift 1 other card"
+        valueLessThanStackSize?: boolean;  // Nova-3
+        calculation?: 'highest_value' | 'lowest_value';  // Ambush-2
     };
     destinationRestriction?: {
         type: 'non_matching_protocol' | 'specific_lane' | 'to_another_line' | 'to_this_lane' | 'to_or_from_this_lane' | 'any' | 'opponent_highest_value_lane';
@@ -226,7 +235,7 @@ export interface DiscardEffectParams {
         alternative: 'flip_self';  // Either discard or flip self
     };
     // NEW: Dynamic discard count (Plague-2)
-    countType?: 'fixed' | 'equal_to_discarded';
+    countType?: 'fixed' | 'equal_to_discarded' | Main3CountType;
     countOffset?: number;  // For Plague-2: "discard count + 1" → offset = 1
     // NEW: Random selection - opponent can't choose which card to discard (Fear-4)
     random?: boolean;
@@ -247,6 +256,7 @@ export interface ReturnEffectParams {
         position?: 'any' | 'covered' | 'uncovered';  // Position filter (default: 'uncovered')
         owner?: 'own' | 'opponent' | 'any';  // whose cards to return (default: 'any')
         faceState?: 'face_up' | 'face_down';  // Face state filter
+        excludeSelf?: boolean;  // Gluttony-0, Sloth-1: "Return 1 other card"
     };
     scope?: {
         type: 'any_card' | 'cards_in_lane';
@@ -284,7 +294,9 @@ export interface PlayEffectParams {
     excludeSourceProtocol?: boolean;  // Diversity-0: Can only play cards that are NOT this card's protocol
     optional?: boolean;  // "You may play..."
     destinationRule: {
-        type: 'other_lines' | 'specific_lane' | 'each_line_with_card' | 'under_this_card' | 'each_other_line' | 'line_with_matching_cards';
+        type: 'other_lines' | 'specific_lane' | 'each_line_with_card' | 'under_this_card' | 'each_other_line' | 'line_with_matching_cards'
+            // Main 3 (deck plays, face-down): chosen line, every line, lines you lead, lines with a compiled protocol, under an uncovered card of this protocol
+            | 'any_line' | 'each_line' | 'each_line_where_higher' | 'each_line_with_compiled' | 'under_uncovered_protocol';
         excludeCurrentLane?: boolean;
         laneIndex?: number | 'current';  // For Gravity-6 "opponent plays in this line", 'current' = this card's lane
         ownerFilter?: 'own' | 'opponent' | 'any';  // Whose cards to check
@@ -319,6 +331,9 @@ export interface PlayEffectParams {
 export interface ProtocolEffectParams {
     action: 'rearrange_protocols' | 'swap_protocols';
     target: 'own' | 'opponent' | 'both_sequential';
+    fixedLanes?: [number, number];   // Fulcrum-3: swap these two protocols directly
+    actorIsControlHolder?: boolean;  // Nova-0: the player with control makes the swap
+    optional?: boolean;
     restriction?: {
         disallowedProtocol: string;  // e.g., "Anarchy"
         laneIndex: number | 'current';  // NEW: 'current' = lane where this card is located (Anarchy-3)
@@ -387,7 +402,8 @@ export interface PassiveRuleParams {
             | 'skip_check_cache_phase'       // Spirit-0: Skip check cache phase
             | 'block_flip_this_card'         // Ice-4: This card cannot be flipped
             | 'block_draw_conditional'       // Ice-6: Conditional draw blocking
-            | 'allow_same_protocol_face_up_play';  // Unity-1 Bottom: Same-protocol cards may be played face-up
+            | 'allow_same_protocol_face_up_play'  // Unity-1 Bottom: Same-protocol cards may be played face-up
+            | 'block_opponent_compile_while_controlling';  // Lust-0 Bottom: opponent can't compile while you have control
         target: 'self' | 'opponent' | 'all' | 'this_card';  // Who is affected (this_card = only this card)
         scope: 'this_lane' | 'global' | 'this_card';        // Where it applies (this_card = only this card)
         // NEW: Only active during card owner's turn (Fear-0: "During your turn...")
@@ -409,19 +425,23 @@ export interface ValueModifierParams {
     modifier: {
         type: 'add_per_condition'         // Apathy-0: +1 per face-down card
             | 'set_to_fixed'              // Darkness-2: set face-down cards to 4
-            | 'add_to_total';             // Metal-0: opponent total -2
+            | 'add_to_total'              // Metal-0: opponent total -2
+            | 'add_opponent_highest_in_lane'  // Envy-0: + value of opponent's highest card in this line
+            | 'ignore_highest_in_lane';   // Wrath-0: highest-value cards in this line don't count
         value: number;                    // The modifier value (+1, 4, -2, etc.)
         condition?: 'per_face_down_card'  // For add_per_condition type
                   | 'per_face_up_card'
                   | 'per_card'
                   | 'per_card_in_hand'    // Clarity-0: +1 per card in your hand
                   | 'per_opponent_card_in_lane'  // Mirror-0: +1 per opponent's card in this lane
-                  | 'has_non_own_protocol_face_up';  // Diversity-3: Only if there are non-own-protocol face-up cards in this stack
+                  | 'has_non_own_protocol_face_up'  // Diversity-3: Only if there are non-own-protocol face-up cards in this stack
+                  | 'this_card_covered_by_same_protocol';  // Sloth-0: only while covered by a card of its protocol
         target: 'own_cards'               // Which cards/totals to modify
               | 'opponent_cards'
               | 'all_cards'
               | 'own_total'               // Modify final total
-              | 'opponent_total';
+              | 'opponent_total'
+              | 'both_totals';            // Lust-0: each player's total
         scope: 'this_lane' | 'global';
         filter?: {                        // Filter which cards (for card modifiers)
             faceState?: 'face_up' | 'face_down' | 'any';
@@ -474,6 +494,7 @@ export interface StateProtocolEffectParams {
 export interface SwapStacksEffectParams {
     action: 'swap_stacks';
     target: 'own';  // Currently only supports own lanes (could be extended)
+    fixedLanes?: [number, number];  // Fulcrum-1: swap these two stacks directly
 }
 
 /**
@@ -501,6 +522,20 @@ export interface AutoCompileEffectParams {
 }
 
 /**
+ * Main 3 actions (logic/effects/actions/main3Executor.ts)
+ */
+export interface Main3EffectParams {
+    action: 'control' | 'compile_line' | 'flip_all_in_line' | 'flip_all_matching' | 'delete_face_up_in_line'
+        | 'delete_covering_card' | 'reveal_random_play_on_opponent' | 'hand_to_deck_bottom';
+    mode?: 'gain' | 'lose';          // control
+    who?: 'self' | 'opponent';       // control: whose control changes
+    optional?: boolean;
+    ownCardsExactly?: number;        // delete_face_up_in_line (Nova-0)
+    valueMax?: number;               // flip_all_matching (Ambush-1)
+    drawPerFlip?: boolean;           // flip_all_matching
+}
+
+/**
  * Union of all effect parameter types
  */
 export type EffectParams =
@@ -523,7 +558,8 @@ export type EffectParams =
     | StateProtocolEffectParams
     | SwapStacksEffectParams
     | CopyOpponentMiddleEffectParams
-    | AutoCompileEffectParams;
+    | AutoCompileEffectParams
+    | Main3EffectParams;
 
 /**
  * Effect Definition - Single effect with parameters
@@ -553,6 +589,19 @@ export interface EffectDefinition {
     onlyDuringOpponentTurn?: boolean;
     // NEW: For on_cover triggers - only trigger if covered by same protocol (Unity-0 Bottom)
     onCoverProtocolRestriction?: 'same_protocol';  // Only trigger if covering card has same protocol
+    // Main 3: gate checked before the effect runs ("If you have control, ..."); elseEffect runs instead when it fails
+    condition?: EffectCondition;
+    elseEffect?: EffectDefinition;
+}
+
+/**
+ * Main 3 effect conditions (relative to the card owner)
+ */
+export interface EffectCondition {
+    type: 'self_has_control' | 'opponent_has_control' | 'opponent_more_compiled'
+        | 'hand_exactly' | 'hand_at_least' | 'higher_total_in_this_line' | 'opponent_higher_in_this_line'
+        | 'more_cards_in_play' | 'has_uncovered_face_down' | 'covering_same_protocol' | 'last_returned_was_own';
+    value?: number;
 }
 
 /**
@@ -560,6 +609,7 @@ export interface EffectDefinition {
  */
 export interface CustomCardDefinition {
     value: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6;
+    text?: { top?: string; middle?: string; bottom?: string };  // Exact printed text (overrides generated text)
     topEffects: EffectDefinition[];     // Top box (passive, always active when face-up)
     middleEffects: EffectDefinition[];  // Middle box (on play / when uncovered)
     bottomEffects: EffectDefinition[];  // Bottom box (start/end/on-cover triggers)
@@ -587,7 +637,7 @@ export type CardPattern =
 /**
  * Custom Protocol Definition - Complete protocol set (6 cards)
  */
-export type ProtocolCategory = 'Main 1' | 'Main 2' | 'Aux 1' | 'Aux 2' | 'Fan-Content' | 'Custom';
+export type ProtocolCategory = 'Main 1' | 'Main 2' | 'Main 3' | 'Aux 1' | 'Aux 2' | 'Fan-Content' | 'Custom';
 
 export interface CustomProtocolDefinition {
     id: string;  // Unique ID for this protocol

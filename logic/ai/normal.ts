@@ -116,6 +116,9 @@ const matchesTargetFilter = (
     // Exclude self
     if (targetFilter.excludeSelf && sourceCardId && card.id === sourceCardId) return false;
 
+    // Precomputed targets (Main 3: highest/lowest value, value below stack size)
+    if (targetFilter.allowedIds && !targetFilter.allowedIds.includes(card.id)) return false;
+
     // Value range filter (Death-4: only value 0 or 1)
     // Game rule: face-down cards have value 2 (effective value)
     if (targetFilter.valueRange) {
@@ -1627,6 +1630,15 @@ const handleRequiredAction = (state: GameState, action: ActionRequired): AIActio
         }
         // LEGACY REMOVED: select_lane_to_shift_cards_for_light_3 - now uses generic select_lane_for_shift_all
         // LEGACY REMOVED: select_lane_for_metal_3_delete - now uses generic select_lane_for_delete
+
+        case 'select_lane_custom': {
+            // Main 3 line choice: the effect scored each valid line for its owner
+            const lanes: number[] = (action as any).validLanes || [];
+            const scores: Record<number, number> = (action as any).aiLaneScores || {};
+            if (lanes.length === 0) return { type: 'skip' };
+            const best = [...lanes].sort((a, b) => (scores[b] ?? 0) - (scores[a] ?? 0))[0];
+            return { type: 'selectLane', laneIndex: best };
+        }
 
         case 'select_lane_for_delete_all': {
             // Generic handler for delete all in lane (custom protocols)

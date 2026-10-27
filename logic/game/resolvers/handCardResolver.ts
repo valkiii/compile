@@ -22,6 +22,19 @@ export const resolveActionWithHandCard = (prevState: GameState, cardId: string):
             const cardToGive = prevState[actor].hand.find(c => c.id === cardId);
             if (!cardToGive) return prevState;
 
+            // Sloth-2: "put 1 card from your hand on the bottom of your deck" (same hand prompt)
+            if ((actionRequired as any).mode === 'deck_bottom') {
+                const { id, isFaceUp, isRevealed, ...deckCard } = cardToGive as any;
+                let newState: GameState = {
+                    ...prevState,
+                    [actor]: { ...prevState[actor], hand: prevState[actor].hand.filter(c => c.id !== cardId), deck: [...prevState[actor].deck, deckCard] },
+                    actionRequired: null,
+                };
+                const actorName = actor === 'player' ? 'Player' : 'Opponent';
+                newState = log(newState, actor, `${actorName} puts a card from their hand on the bottom of their deck.`);
+                return newState;
+            }
+
             let newState = { ...prevState };
             const actorState = { ...newState[actor] };
             const opponentState = { ...newState[opponent] };

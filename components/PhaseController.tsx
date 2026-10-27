@@ -331,7 +331,9 @@ export const PhaseController: React.FC<PhaseControllerProps> = ({
                 case 'delete_self':
                     return 'Deleting card...';
                 case 'select_card_from_hand_to_give':
-                    return 'Action: Select a card from your hand to give';
+                    return (actionRequired as any).mode === 'deck_bottom'
+                        ? 'Action: Select a card from your hand to put on the bottom of your deck'
+                        : 'Action: Select a card from your hand to give';
                 case 'select_card_from_hand_to_reveal':
                     return 'Action: Select a card from your hand to reveal';
                 case 'plague_2_player_discard':
@@ -412,6 +414,8 @@ export const PhaseController: React.FC<PhaseControllerProps> = ({
                     return 'Action: Select a lane with 8+ cards to delete';
                 case 'select_lane_for_delete_all':
                     return 'Action: Select a lane to delete all cards';
+                case 'select_lane_custom':
+                    return `Action: ${(actionRequired as any).prompt || 'Select a line'}`;
                 case 'select_lanes_for_swap_stacks': {
                     const selectedFirst = (actionRequired as any).selectedFirstLane;
                     if (selectedFirst === undefined) {

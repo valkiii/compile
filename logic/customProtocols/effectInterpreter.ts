@@ -28,6 +28,8 @@ import { executeStateNumberEffect } from '../effects/actions/stateNumberExecutor
 import { executeStateProtocolEffect } from '../effects/actions/stateProtocolExecutor';
 import { executeSwapStacksEffect } from '../effects/actions/swapStacksExecutor';
 import { executeCopyOpponentMiddleEffect } from '../effects/actions/copyEffectExecutor';
+import { executeMain3Effect, executeMain3Play, executeFixedSwap } from '../effects/actions/main3Executor';
+import { gateEffect, conditionText, withComputedTargets } from './main3Rules';
 
 /**
  * Execute AUTO_COMPILE effect (Diversity-0)
@@ -166,7 +168,7 @@ export function executeCustomEffect(
 
     // CRITICAL: Include conditional info in params for ALL effects
     // This enables "If you do" patterns like Death-1, Speed-3, etc.
-    const params = {
+    let params = {
         ...effectDef.params as any,
         _conditional: effectDef.conditional  // Pass conditional for followUpEffect handling
     };
@@ -201,6 +203,26 @@ export function executeCustomEffect(
             return { newState: state };
         }
     }
+
+    // Main 3: condition gate ("If you have control, ...") - runs elseEffect or skips when not met
+    const gate = gateEffect(effectDef, state, card, laneIndex, context.cardOwner);
+    if (gate === 'skip') {
+        const skipped = log(state, context.cardOwner, `Effect skipped: ${conditionText(effectDef.condition!)}.`);
+        (skipped as any)._effectSkippedNoTargets = true;
+        return { newState: skipped };
+    }
+    if (gate) {
+        return executeCustomEffect(card, laneIndex, state, context, gate);
+    }
+
+    // Main 3: computed target sets (highest / lowest value, value below stack size, "other" card)
+    const computedParams = withComputedTargets(params, state, card, laneIndex, context.cardOwner);
+    if (computedParams === null) {
+        const skipped = log(state, context.cardOwner, 'No valid targets - effect skipped.');
+        (skipped as any)._effectSkippedNoTargets = true;
+        return { newState: skipped };
+    }
+    params = computedParams;
 
     // CRITICAL: Handle optional effects BEFORE executing them
     // If params.optional === true, create a prompt instead of executing directly
@@ -658,12 +680,28 @@ export function executeCustomEffect(
             break;
 
         case 'play':
-            result = executePlayEffect(card, laneIndex, state, context, params);
+            result = executeMain3Play(card, laneIndex, state, context, params)
+                ?? executePlayEffect(card, laneIndex, state, context, params);
             break;
 
         case 'rearrange_protocols':
         case 'swap_protocols':
+            if (params.fixedLanes) {
+                result = { newState: executeFixedSwap(state, context.cardOwner, 'protocols', params.fixedLanes, card) };
+                break;
+            }
             result = executeProtocolEffect(card, laneIndex, state, context, params);
+            break;
+
+        case 'control':
+        case 'compile_line':
+        case 'flip_all_in_line':
+        case 'flip_all_matching':
+        case 'delete_face_up_in_line':
+        case 'delete_covering_card':
+        case 'reveal_random_play_on_opponent':
+        case 'hand_to_deck_bottom':
+            result = executeMain3Effect(card, laneIndex, state, context, params);
             break;
 
         case 'reveal':
@@ -704,7 +742,9 @@ export function executeCustomEffect(
             break;
 
         case 'swap_stacks':
-            result = executeSwapStacksEffect(card, laneIndex, state, context, params);
+            result = params.fixedLanes
+                ? { newState: executeFixedSwap(state, context.cardOwner, 'stacks', params.fixedLanes, card) }
+                : executeSwapStacksEffect(card, laneIndex, state, context, params);
             break;
 
         case 'copy_opponent_middle':
@@ -874,8 +914,11 @@ function executeProtocolEffect(
 
     // Determine which player's protocols are being affected
     const targetPlayer = targetParam === 'opponent' ? opponent : cardOwner;
-    // Actor is always the card owner (who performs the action)
-    const actingPlayer = cardOwner;
+    // Actor is the card owner (who performs the action) - or the control holder (Nova-0)
+    if (params.actorIsControlHolder && !state.controlCardHolder) {
+        return { newState: log(state, cardOwner, 'No player has control - effect skipped.') };
+    }
+    const actingPlayer = params.actorIsControlHolder ? state.controlCardHolder! : cardOwner;
 
     // CRITICAL: Check if Frost-1 Bottom effect is active (Protocols cannot be rearranged)
     const frost1BottomActive = isFrost1BottomActive(state);

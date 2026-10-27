@@ -656,6 +656,9 @@ export function internalReturnCard(state: GameState, targetCardId: string, desti
         newState = log(newState, actor, `${actorName} returns ${ownerName} ${cardName} to their hand.`);
     }
 
+    // Sloth-1: "If the returned card is one of your cards, ..."
+    (newState as any)._lastReturnedCardOwner = owner;
+
     // CRITICAL: Queue pending custom effects before clearing actionRequired
     newState = queuePendingCustomEffects(newState);
 

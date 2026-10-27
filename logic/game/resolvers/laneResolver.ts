@@ -18,6 +18,7 @@ import { executeOnPlayEffect, executeOnCoverEffect } from '../../effectExecutor'
 import { processQueuedActions, queuePendingCustomEffects, processEndOfAction } from '../phaseManager';
 import { canShiftCard, hasAnyProtocolPlayRule, canPlayFaceUpDueToSameProtocolRule } from '../passiveRuleChecker';
 import { queueFollowUpEffectSync, isFollowUpAlreadyQueued } from './followUpHelper';
+import { resolveCustomLaneChoice } from '../../effects/actions/main3Executor';
 
 export type LaneActionResult = {
     nextState: GameState;
@@ -1522,6 +1523,14 @@ export const resolveActionWithLane = (prev: GameState, targetLaneIndex: number):
         }
         // REMOVED: select_lane_to_shift_cards_for_light_3 - Light-3 now uses generic select_lane_for_shift_all
         // REMOVED: select_lane_for_water_3 - Water-3 now uses generic select_lane_for_return with targetFilter
+
+        // Main 3: generic line choice (Wrath-2, Nova-0, Greed-1, Lust-3, Gluttony-0)
+        case 'select_lane_custom': {
+            newState = resolveCustomLaneChoice(prev, targetLaneIndex);
+            if (newState === prev) return { nextState: prev };
+            if (!newState.actionRequired) newState = queuePendingCustomEffects(newState);
+            break;
+        }
 
         // =========================================================================
         // SWAP STACKS (Mirror-2)

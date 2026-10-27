@@ -81,6 +81,11 @@ describe('online mirror', () => {
         expect(isDecisionValidFor(lanePrompt, { type: 'selectLane', laneIndex: 1 })).toBe(true);
         expect(isDecisionValidFor(lanePrompt, { type: 'shiftCard', cardId: 'p1' })).toBe(false);
 
+        // Main 3 line choice: pending owner is mirrored for the guest, lane taps are accepted
+        const main3Prompt = { ...base(), actionRequired: { type: 'select_lane_custom', actor: 'opponent', validLanes: [0, 2], pending: { kind: 'flip_all_in_line', cardOwner: 'opponent' } } as unknown as GameState['actionRequired'] };
+        expect(isDecisionValidFor(main3Prompt, { type: 'selectLane', laneIndex: 2 })).toBe(true);
+        expect((stateForGuest(main3Prompt).actionRequired as any).pending.cardOwner).toBe('player');
+
         const cardPrompt = { ...base(), actionRequired: { type: 'select_card_from_other_lanes_to_delete', actor: 'opponent' } as unknown as GameState['actionRequired'] };
         expect(isDecisionValidFor(cardPrompt, { type: 'deleteCard', cardId: 'p1' })).toBe(true);
         expect(isDecisionValidFor(cardPrompt, { type: 'selectLane', laneIndex: 0 })).toBe(false);

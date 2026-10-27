@@ -415,7 +415,7 @@ export const handleRequiredActionSync = (
     // --- GIVE CARD ---
     if (aiDecision.type === 'giveCard' && action.type === 'select_card_from_hand_to_give') {
         // Create give animation BEFORE state change (Capture → Change → Enqueue)
-        if (enqueueAnimation) {
+        if (enqueueAnimation && (action as any).mode !== 'deck_bottom') {
             createAndEnqueueGiveAnimation(state, aiDecision.cardId, 'opponent', enqueueAnimation);
         }
         const newState = actions.resolveActionWithHandCard(state, aiDecision.cardId);
@@ -599,7 +599,7 @@ export const runOpponentTurnSync = (
             // actionRequired is still pending), force-skip it. Otherwise this
             // loop spins until MAX_ITERATIONS and the game hangs.
             if (state.actionRequired && state.actionRequired === actionBefore) {
-                console.error('[AI] No progress on action, forcing skip to prevent softlock:', actionBefore?.type);
+                console.error('[AI] No progress on action, forcing skip to prevent softlock:', actionBefore?.type, (() => { const s = findCardOnBoard(state, (actionBefore as any)?.sourceCardId)?.card; return s ? `${s.protocol}-${s.value}` : ''; })());
                 state = actions.skipAction(state);
                 // skipAction only clears OPTIONAL actions - hard-clear as last resort
                 if (state.actionRequired === actionBefore) {

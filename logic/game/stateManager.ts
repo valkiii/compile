@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { getActivePassiveRules } from './passiveRuleChecker';
+import { needsControlMechanic } from '../customProtocols/main3Rules';
 import { v4 as uuidv4 } from 'uuid';
 import { GameState, Player, PlayerState, PlayedCard } from '../../types';
 import { buildDeck, shuffleDeck } from '../../utils/gameLogic';
@@ -48,7 +50,8 @@ export const createInitialState = (playerProtocols: string[], opponentProtocols:
         turn: startingPlayer,
         phase: 'start',
         controlCardHolder: null,
-        useControlMechanic,
+        // Main 3 cards gain, lose and check control: always on when one of them is in the game
+        useControlMechanic: useControlMechanic || needsControlMechanic([...playerProtocols, ...opponentProtocols]),
         winner: null,
         log: [],
         actionRequired: null,
@@ -142,10 +145,11 @@ const calculateBaseLaneValue = (lane: PlayedCard[], state?: GameState, laneIndex
  * Get active value modifiers from custom protocol cards
  */
 interface ValueModifier {
-    type: 'add_per_condition' | 'set_to_fixed' | 'add_to_total';
+    type: 'add_per_condition' | 'set_to_fixed' | 'add_to_total' | 'add_opponent_highest_in_lane' | 'ignore_highest_in_lane';
     value: number;
-    condition?: 'per_face_down_card' | 'per_face_up_card' | 'per_card' | 'per_card_in_hand' | 'per_opponent_card_in_lane' | 'has_non_own_protocol_face_up';
-    target: 'own_cards' | 'opponent_cards' | 'all_cards' | 'own_total' | 'opponent_total';
+    condition?: 'per_face_down_card' | 'per_face_up_card' | 'per_card' | 'per_card_in_hand' | 'per_opponent_card_in_lane' | 'has_non_own_protocol_face_up' | 'this_card_covered_by_same_protocol';
+    target: 'own_cards' | 'opponent_cards' | 'all_cards' | 'own_total' | 'opponent_total' | 'both_totals';
+    sourceCardId?: string;
     scope: 'this_lane' | 'global';
     sourceCardProtocol?: string; // For has_non_own_protocol_face_up condition
     filter?: {
@@ -178,7 +182,8 @@ function getActiveValueModifiers(state: GameState): ValueModifier[] {
                                     ...effect.params.modifier,
                                     cardOwner: player,
                                     laneIndex,
-                                    sourceCardProtocol: card.protocol // Store for has_non_own_protocol_face_up
+                                    sourceCardProtocol: card.protocol, // Store for has_non_own_protocol_face_up
+                                    sourceCardId: card.id,
                                 });
                             }
                         });
@@ -202,6 +207,17 @@ function applyCustomValueModifiers(
     const modifiers = getActiveValueModifiers(state);
     const finalPlayerValues = [...playerValues];
     const finalOpponentValues = [...opponentValues];
+
+    // Wrath-0: cards with the highest value in the line don't add to either total (once per line)
+    const ignoredLanes = new Set(modifiers.filter(m => m.type === 'ignore_highest_in_lane').map(m => m.laneIndex));
+    for (const lane of ignoredLanes) {
+        const valueOf = (p: Player, c: PlayedCard) => getEffectiveCardValue(c, state[p].lanes[lane], state, lane, p);
+        const all = (['player', 'opponent'] as Player[]).flatMap(p => state[p].lanes[lane].map(c => valueOf(p, c)));
+        if (all.length === 0) continue;
+        const highest = Math.max(...all);
+        finalPlayerValues[lane] -= state.player.lanes[lane].filter(c => valueOf('player', c) === highest).length * highest;
+        finalOpponentValues[lane] -= state.opponent.lanes[lane].filter(c => valueOf('opponent', c) === highest).length * highest;
+    }
 
     for (const modifier of modifiers) {
         const { type, value, condition, target, scope, filter, cardOwner, laneIndex } = modifier;
@@ -249,8 +265,19 @@ function applyCustomValueModifiers(
                     break;
                 }
 
-                case 'set_to_fixed': {
-                    // This affects individual cards, handled in getEffectiveCardValue
+                case 'set_to_fixed':
+                case 'ignore_highest_in_lane': {
+                    // Handled per card (getEffectiveCardValue) / before this loop
+                    break;
+                }
+
+                case 'add_opponent_highest_in_lane': {
+                    // Envy-0: + the value of the opponent's highest card in this line
+                    const opponent = cardOwner === 'player' ? 'opponent' : 'player';
+                    const oppLane = state[opponent].lanes[lane];
+                    const highest = oppLane.length ? Math.max(...oppLane.map(c => getEffectiveCardValue(c, oppLane, state, lane, opponent))) : 0;
+                    if (cardOwner === 'player') finalPlayerValues[lane] += highest;
+                    else finalOpponentValues[lane] += highest;
                     break;
                 }
 
@@ -269,6 +296,21 @@ function applyCustomValueModifiers(
                         );
 
                         if (!hasNonOwnProtocol) continue; // Condition not met, skip this modifier
+                    }
+
+                    // Sloth-0: only while the card is covered by a card of its own protocol
+                    if (condition === 'this_card_covered_by_same_protocol') {
+                        const ownerLane = state[cardOwner].lanes[laneIndex];
+                        const idx = ownerLane.findIndex(c => c.id === modifier.sourceCardId);
+                        const coveringCard = idx >= 0 ? ownerLane[idx + 1] : undefined;
+                        if (!coveringCard || !coveringCard.isFaceUp || coveringCard.protocol !== modifier.sourceCardProtocol) continue;
+                    }
+
+                    if (target === 'both_totals') {
+                        // Lust-0: each player's total in this line
+                        finalPlayerValues[lane] += value;
+                        finalOpponentValues[lane] += value;
+                        break;
                     }
 
                     if (target === 'own_total' && cardOwner === 'player') {
@@ -331,7 +373,10 @@ export const calculateCompilableLanes = (state: GameState, player: Player): numb
     const compilableLanes = [];
     const playerState = state[player];
     const opponentState = state[player === 'player' ? 'opponent' : 'player'];
-    if (!playerState.cannotCompile) {
+    // Lust-0 (bottom): "Your opponent can't compile if you have control"
+    const blockedByControl = getActivePassiveRules(state).some(({ rule, cardOwner }) =>
+        rule.type === 'block_opponent_compile_while_controlling' && cardOwner !== player && state.controlCardHolder === cardOwner);
+    if (!playerState.cannotCompile && !blockedByControl) {
         for(let i = 0; i < 3; i++) {
             const playerValue = playerState.laneValues[i];
             const opponentValue = opponentState.laneValues[i];

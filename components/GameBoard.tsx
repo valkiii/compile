@@ -241,6 +241,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false
                 const totalCards = player.lanes[targetLaneIndex].length + opponent.lanes[targetLaneIndex].length;
                 return totalCards >= 8;
             }
+            case 'select_lane_custom':
             case 'select_lane_for_delete_all': {
                 // Custom protocol version: use validLanes from actionRequired
                 const validLanes = (actionRequired as any).validLanes || [];

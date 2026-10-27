@@ -123,6 +123,8 @@ export interface TargetFilter {
     valueEquals?: number;
     calculation?: 'highest_value' | 'lowest_value';
     valueMinGreaterThanHandSize?: boolean;  // Target must have value > hand size
+    valueLessThanStackSize?: boolean;  // Main 3 (Nova-3/4): value < cards in the source card's stack
+    allowedIds?: string[];  // Precomputed valid targets (set by the interpreter for computed filters)
 }
 
 /**

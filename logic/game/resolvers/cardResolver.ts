@@ -710,7 +710,8 @@ export const resolveActionWithCard = (
 
             // GENERIC VALIDATION for calculation: highest_value / lowest_value (Hate-2)
             const targetFilter = (prev.actionRequired as any).targetFilter;
-            if (targetFilter?.calculation === 'highest_value' || targetFilter?.calculation === 'lowest_value') {
+            // (allowedIds from the delete executor already holds the exact highest/lowest set, incl. covered cards)
+            if (!allowedIds && (targetFilter?.calculation === 'highest_value' || targetFilter?.calculation === 'lowest_value')) {
                 // Determine the target player based on owner filter
                 const ownerFilter = targetFilter.owner;
                 const targetPlayer = ownerFilter === 'opponent'

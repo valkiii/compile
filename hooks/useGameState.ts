@@ -93,6 +93,15 @@ export const useGameState = (
     // Ref-based lock to prevent race conditions between AI processing hooks
     const isProcessingAIRef = useRef<boolean>(false);
 
+    // Main 3 (Greed-1): a card effect can compile the last protocol - end the game from here
+    const effectWinner = (gameState as any)._effectWinner as Player | undefined;
+    const effectWinnerHandledRef = useRef(false);
+    useEffect(() => {
+        if (!effectWinner || effectWinnerHandledRef.current) return;
+        effectWinnerHandledRef.current = true;
+        onEndGame(effectWinner, gameState);
+    }, [effectWinner]);
+
     // ANTI-SOFTLOCK: tracks repeats of identical (by content) pending AI actions
     const aiActionRepeatRef = useRef<{ key: string | null; count: number }>({ key: null, count: 0 });
 
@@ -738,7 +747,7 @@ export const useGameState = (
         // Create give/reveal animation BEFORE setGameState
         const actionType = gameState.actionRequired?.type;
         if (enqueueAnimation &&
-            actionType === 'select_card_from_hand_to_give') {
+            actionType === 'select_card_from_hand_to_give' && (gameState.actionRequired as any).mode !== 'deck_bottom') {
             const card = gameState.player.hand.find(c => c.id === cardId);
             const handIndex = gameState.player.hand.findIndex(c => c.id === cardId);
 

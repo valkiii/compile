@@ -216,7 +216,7 @@ export function processReactiveEffects(
             // Special case: after_opponent_compile (War-2)
             // context.player is the NON-compiler (opponent of the compiling player)
             // The card should trigger if its owner IS context.player
-            if (triggerType === 'after_opponent_compile') {
+            if (triggerType === 'after_opponent_compile' || triggerType === 'after_opponent_gain_control') {
                 if (context.player !== owner) {
                     return false;
                 }

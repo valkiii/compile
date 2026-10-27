@@ -1,0 +1,237 @@
+{
+  "id": "pride-main3-001",
+  "name": "Pride",
+  "description": "Stay ahead, shift, draw.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#F2B23A",
+  "pattern": "stripes",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [
+        {
+          "id": "pride-0-top",
+          "params": {
+            "action": "refresh"
+          },
+          "position": "top",
+          "trigger": "after_compile"
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "pride-0-mid",
+          "params": {
+            "action": "shift",
+            "optional": false,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "faceState": "any",
+              "excludeSelf": true
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "self_has_control"
+          },
+          "elseEffect": {
+            "id": "pride-0-mid-else",
+            "params": {
+              "action": "shift",
+              "optional": false,
+              "targetFilter": {
+                "owner": "own",
+                "position": "uncovered",
+                "faceState": "any"
+              }
+            },
+            "position": "middle",
+            "trigger": "on_play"
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "<div><span class='emphasis'>After you compile:</span> Refresh.</div>",
+        "middle": "If you have control, shift 1 other card. Else, shift 1 of your cards.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "pride-2-mid",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck",
+            "countType": "lines_with_higher_total"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "pride-2-bot",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "bottom",
+          "trigger": "start",
+          "condition": {
+            "type": "higher_total_in_this_line"
+          }
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "Draw cards equal to the number of lines where you have a higher total value than your opponent.",
+        "bottom": "<div><span class='emphasis'>Start:</span> If you have a higher total value than your opponent in this line, draw 1 card.</div>"
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "pride-3-mid",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "targetFilter": {
+              "owner": "own",
+              "position": "uncovered",
+              "faceState": "face_down",
+              "excludeSelf": false
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Flip 1 of your face-down cards.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "pride-4-mid",
+          "params": {
+            "action": "shift",
+            "optional": true,
+            "targetFilter": {
+              "owner": "opponent",
+              "position": "uncovered",
+              "faceState": "any"
+            },
+            "destinationRestriction": {
+              "type": "to_this_lane",
+              "laneIndex": "current"
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "self_has_control"
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "If you have control, you may shift 1 of your opponent's cards to this line.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "pride-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 6,
+      "topEffects": [
+        {
+          "id": "pride-6-top",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "flipSelf": true,
+            "targetFilter": {
+              "owner": "own",
+              "position": "any",
+              "faceState": "any",
+              "excludeSelf": false
+            }
+          },
+          "position": "top",
+          "trigger": "after_opponent_gain_control"
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "pride-6-mid",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "flipSelf": true,
+            "targetFilter": {
+              "owner": "own",
+              "position": "any",
+              "faceState": "any",
+              "excludeSelf": false
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "opponent_has_control"
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "<div><span class='emphasis'>After your opponent gains control:</span> Flip this card.</div>",
+        "middle": "If your opponent has control, flip this card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

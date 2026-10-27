@@ -1,0 +1,197 @@
+{
+  "id": "momentum-main3-001",
+  "name": "Momentum",
+  "description": "After compile, draw.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#F07A2A",
+  "pattern": "vertical-lines",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "momentum-0-mid",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "each_line_with_compiled"
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Play the top card of your deck face-down in each line with a compiled protocol.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 1,
+      "topEffects": [
+        {
+          "id": "momentum-1-top",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "specific_lane",
+              "laneIndex": "current"
+            }
+          },
+          "position": "top",
+          "trigger": "after_compile",
+          "reactiveTriggerActor": "any"
+        }
+      ],
+      "middleEffects": [],
+      "bottomEffects": [
+        {
+          "id": "momentum-1-bot",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "bottom",
+          "trigger": "after_rearrange",
+          "reactiveTriggerActor": "any",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "momentum-1-bot-draw",
+              "params": {
+                "action": "draw",
+                "count": 1,
+                "target": "self",
+                "source": "own_deck"
+              },
+              "position": "bottom",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "text": {
+        "top": "<div><span class='emphasis'>After a player compiles:</span> Play the top card of your deck face-down in this stack.</div>",
+        "middle": "",
+        "bottom": "<div><span class='emphasis'>After a player rearranges protocols:</span> Discard 1 card. Draw 1 card.</div>"
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "momentum-3-mid",
+          "params": {
+            "action": "draw",
+            "count": 2,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Draw 2 cards.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "momentum-4-mid",
+          "params": {
+            "action": "rearrange_protocols",
+            "target": "own"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Rearrange your protocols.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "momentum-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 6,
+      "topEffects": [
+        {
+          "id": "momentum-6-top",
+          "params": {
+            "action": "delete",
+            "count": 1,
+            "deleteSelf": true,
+            "excludeSelf": false,
+            "targetFilter": {
+              "position": "any",
+              "faceState": "any"
+            }
+          },
+          "position": "top",
+          "trigger": "after_compile",
+          "reactiveTriggerActor": "any"
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "momentum-6-mid",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "<div><span class='emphasis'>After a player compiles:</span> Delete this card.</div>",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

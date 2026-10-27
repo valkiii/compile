@@ -40,6 +40,19 @@ const SYSTEM_PROTOCOL_IDS = [
     'unity-custom-001',
     'war-custom-001',
     'water_custom_1',
+    // Main 3
+    'envy-main3-001',
+    'gluttony-main3-001',
+    'greed-main3-001',
+    'lust-main3-001',
+    'pride-main3-001',
+    'sloth-main3-001',
+    'wrath-main3-001',
+    'ambush-main3-001',
+    'fulcrum-main3-001',
+    'overwhelm-main3-001',
+    'momentum-main3-001',
+    'nova-main3-001',
 ];
 
 export const isSystemProtocol = (protocol: CustomProtocolDefinition): boolean => {

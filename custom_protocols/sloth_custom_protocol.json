@@ -1,0 +1,218 @@
+{
+  "id": "sloth-main3-001",
+  "name": "Sloth",
+  "description": "Discard, flip.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#8A8F98",
+  "pattern": "horizontal-lines",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [
+        {
+          "id": "sloth-0-top",
+          "params": {
+            "action": "value_modifier",
+            "modifier": {
+              "type": "add_to_total",
+              "value": 5,
+              "target": "own_total",
+              "scope": "this_lane",
+              "condition": "this_card_covered_by_same_protocol"
+            }
+          },
+          "position": "top",
+          "trigger": "passive"
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "sloth-0-mid",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck",
+            "countType": "lines_with_lower_total"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "Your total value in this line is increased by 5 if this card is covered by a Sloth card.",
+        "middle": "Draw cards equal to the number of lines where you have a lower total value than your opponent.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 1,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "sloth-1-mid",
+          "params": {
+            "action": "return",
+            "count": 1,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "excludeSelf": true
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "sloth-1-mid-refresh",
+              "params": {
+                "action": "refresh"
+              },
+              "position": "middle",
+              "trigger": "on_play",
+              "condition": {
+                "type": "last_returned_was_own"
+              }
+            }
+          }
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "sloth-1-bot",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "specific_lane",
+              "laneIndex": "current"
+            }
+          },
+          "position": "bottom",
+          "trigger": "after_refresh"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "Return 1 other card. If the returned card is one of your cards, refresh.",
+        "bottom": "<div><span class='emphasis'>After you refresh:</span> Play the top card of your deck face-down in this stack.</div>"
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "sloth-2-mid",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "targetFilter": {
+              "owner": "own",
+              "position": "covered",
+              "faceState": "any",
+              "excludeSelf": false
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "sloth-2-bot",
+          "params": {
+            "action": "hand_to_deck_bottom",
+            "optional": true
+          },
+          "position": "bottom",
+          "trigger": "start"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "Flip 1 of your covered cards.",
+        "bottom": "<div><span class='emphasis'>Start:</span> You may put 1 card from your hand on the bottom of your deck.</div>"
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "sloth-3-mid",
+          "params": {
+            "action": "discard",
+            "count": 2,
+            "actor": "opponent"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Your opponent discards 2 cards.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [],
+      "bottomEffects": [
+        {
+          "id": "sloth-4-bot",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "faceState": "face_up",
+              "excludeSelf": false
+            }
+          },
+          "position": "bottom",
+          "trigger": "on_cover"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "",
+        "bottom": "<div><span class='emphasis'>When this card would be covered:</span> First, flip 1 face-up card.</div>"
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "sloth-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

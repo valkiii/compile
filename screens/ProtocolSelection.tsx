@@ -111,7 +111,7 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
   }, [cards]);
 
   // Categories that should be disabled by default
-  const defaultDisabledCategories = ['Fan-Content', 'Main 2', 'Aux 2'];
+  const defaultDisabledCategories = ['Fan-Content', 'Main 2', 'Main 3', 'Aux 2'];
 
   // Filter state - by default Fan-Content, Main 2, and Aux 2 are disabled
   const [enabledCategories, setEnabledCategories] = useState<Set<string>>(new Set());

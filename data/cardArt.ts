@@ -46,9 +46,12 @@ const CARD_ART: Record<string, number[]> = {
     spirit: [0, 1, 2, 3, 4, 5, 6],
     unity: [0],
     water: [0, 1, 2, 3, 4, 5, 6],
+    // Main 3: one protocol illustration per protocol (from the publisher's toolkit)
+    ambush: [0], envy: [0], fulcrum: [0], gluttony: [0], greed: [0], lust: [0],
+    momentum: [0], nova: [0], overwhelm: [0], pride: [0], sloth: [0], wrath: [0],
 };
 
-/** URL of a card's illustration, or null when the protocol has no art (Main 2 / fan protocols). */
+/** URL of a card's illustration, or null when the protocol has no art (Main 2 / Aux 2 / fan protocols). */
 export function cardArtUrl(protocol: string, value: number): string | null {
     const values = CARD_ART[protocol.toLowerCase()];
     if (!source || !values) return null;

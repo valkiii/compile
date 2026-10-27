@@ -1,0 +1,210 @@
+{
+  "id": "nova-main3-001",
+  "name": "Nova",
+  "description": "Stack size, shift, rearrange.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#FF9A1F",
+  "pattern": "multi-radial",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [
+        {
+          "id": "nova-0-top",
+          "params": {
+            "action": "delete_face_up_in_line",
+            "ownCardsExactly": 5
+          },
+          "position": "top",
+          "trigger": "start"
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "nova-0-mid",
+          "params": {
+            "action": "swap_protocols",
+            "target": "own",
+            "actorIsControlHolder": true
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "nova-0-bot",
+          "params": {
+            "action": "play",
+            "source": "deck",
+            "count": 1,
+            "faceDown": true,
+            "destinationRule": {
+              "type": "under_uncovered_protocol"
+            }
+          },
+          "position": "bottom",
+          "trigger": "end"
+        }
+      ],
+      "text": {
+        "top": "<div><span class='emphasis'>Start:</span> Delete all face-up cards in a line where you have exactly 5 cards.</div>",
+        "middle": "The player with control swaps the positions of 2 of your protocols.",
+        "bottom": "<div><span class='emphasis'>End:</span> Play the top card of your deck face-down under an uncovered Nova card.</div>"
+      }
+    },
+    {
+      "value": 1,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "nova-1-mid",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "opponent",
+            "countType": "cards_in_this_stack"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Your opponent discards cards equal to the number of cards in this stack.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "nova-2-mid",
+          "params": {
+            "action": "rearrange_protocols",
+            "target": "own",
+            "optional": true
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "covering_same_protocol"
+          },
+          "elseEffect": {
+            "id": "nova-2-mid-else",
+            "params": {
+              "action": "control",
+              "mode": "gain",
+              "who": "self"
+            },
+            "position": "middle",
+            "trigger": "on_play"
+          }
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "nova-2-bot",
+          "params": {
+            "action": "shift",
+            "optional": true,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "faceState": "face_down"
+            }
+          },
+          "position": "bottom",
+          "trigger": "after_rearrange"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "If this card is covering a Nova card, you may rearrange your protocols. Else, gain control.",
+        "bottom": "<div><span class='emphasis'>After you rearrange protocols:</span> You may shift 1 face-down card.</div>"
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "nova-3-mid",
+          "params": {
+            "action": "shift",
+            "optional": false,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "faceState": "any",
+              "valueLessThanStackSize": true
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Shift 1 card with a value less than the number of cards in this stack.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "nova-4-mid",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "targetFilter": {
+              "owner": "any",
+              "position": "uncovered",
+              "faceState": "any",
+              "excludeSelf": false,
+              "valueLessThanStackSize": true
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Flip 1 card with a value less than the number of cards in this stack.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "nova-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

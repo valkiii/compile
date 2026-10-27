@@ -38,8 +38,9 @@ function parseDifficulty(raw: string | undefined, fallback: Difficulty): Difficu
 const AI1: Difficulty = parseDifficulty(process.env.SIM_AI1, 'hard');   // Player 1 - takes the first turn
 const AI2: Difficulty = parseDifficulty(process.env.SIM_AI2, 'normal'); // Player 2
 
-// Protocol pools used in rotation (variety without exotic edge protocols)
-const PROTOCOL_SETS = [
+// Protocol pools used in rotation (variety without exotic edge protocols).
+// SIM_SETS overrides them, e.g. SIM_SETS="Envy,Greed,Nova;Lust,Pride,Sloth"
+const PROTOCOL_SETS = process.env.SIM_SETS ? process.env.SIM_SETS.split(';').map(set => set.split(',')) : [
     ['Fire', 'Metal', 'Hate'],
     ['Water', 'Spirit', 'Light'],
     ['Speed', 'Darkness', 'Death'],

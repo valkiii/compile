@@ -1,0 +1,271 @@
+{
+  "id": "lust-main3-001",
+  "name": "Lust",
+  "description": "Forced play, control.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#E2333C",
+  "pattern": "dual-radial",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [
+        {
+          "id": "lust-0-top",
+          "params": {
+            "action": "value_modifier",
+            "modifier": {
+              "type": "add_to_total",
+              "value": 10,
+              "target": "both_totals",
+              "scope": "this_lane"
+            }
+          },
+          "position": "top",
+          "trigger": "passive"
+        }
+      ],
+      "middleEffects": [
+        {
+          "id": "lust-0-mid",
+          "params": {
+            "action": "control",
+            "mode": "gain",
+            "who": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "lust-0-bot",
+          "params": {
+            "action": "passive_rule",
+            "rule": {
+              "type": "block_opponent_compile_while_controlling",
+              "target": "opponent",
+              "scope": "global"
+            }
+          },
+          "position": "bottom",
+          "trigger": "passive"
+        }
+      ],
+      "text": {
+        "top": "Each player's total value in this line is increased by 10.",
+        "middle": "Gain control.",
+        "bottom": "Your opponent can't compile if you have control."
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "lust-2-mid",
+          "params": {
+            "action": "shift",
+            "optional": true,
+            "targetFilter": {
+              "owner": "opponent",
+              "position": "covered",
+              "faceState": "any"
+            },
+            "destinationRestriction": {
+              "type": "to_this_lane",
+              "laneIndex": "current"
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "lust-2-bot",
+          "params": {
+            "action": "passive_rule",
+            "rule": {
+              "type": "allow_any_protocol_play",
+              "target": "self",
+              "scope": "this_lane"
+            }
+          },
+          "position": "bottom",
+          "trigger": "passive"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "You may shift 1 of your opponent's covered cards to this line.",
+        "bottom": "Your cards may be played in this stack without matching protocols."
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "lust-3-mid",
+          "params": {
+            "action": "reveal_random_play_on_opponent"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "lust-3-bot",
+          "params": {
+            "action": "control",
+            "mode": "lose",
+            "who": "self",
+            "optional": true
+          },
+          "position": "bottom",
+          "trigger": "end",
+          "condition": {
+            "type": "self_has_control"
+          },
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "lust-3-bot-flip",
+              "params": {
+                "action": "flip",
+                "count": 1,
+                "optional": false,
+                "targetFilter": {
+                  "owner": "any",
+                  "position": "uncovered",
+                  "faceState": "any",
+                  "excludeSelf": false
+                }
+              },
+              "position": "bottom",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "Your opponent reveals 1 random card from their hand. Play that card face-down on their side.",
+        "bottom": "<div><span class='emphasis'>End:</span> You may lose control. If you did, flip 1 card.</div>"
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "lust-4-mid",
+          "params": {
+            "action": "reveal",
+            "source": "own_hand",
+            "count": -1
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "lust-4-mid-lose",
+              "params": {
+                "action": "control",
+                "mode": "lose",
+                "who": "opponent"
+              },
+              "position": "middle",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "bottomEffects": [
+        {
+          "id": "lust-4-bot",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "bottom",
+          "trigger": "after_opponent_gain_control"
+        }
+      ],
+      "text": {
+        "top": "",
+        "middle": "Reveal your hand. Your opponent loses control.",
+        "bottom": "<div><span class='emphasis'>After your opponent gains control:</span> Draw 1 card.</div>"
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "lust-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 6,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "lust-6-mid",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "lust-6-mid-play",
+              "params": {
+                "action": "play",
+                "source": "hand",
+                "count": 1,
+                "faceDown": true,
+                "actor": "opponent",
+                "destinationRule": {
+                  "type": "specific_lane",
+                  "laneIndex": "current"
+                }
+              },
+              "position": "middle",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card. Your opponent plays 1 card face-down in this line.",
+        "bottom": ""
+      }
+    }
+  ]
+}

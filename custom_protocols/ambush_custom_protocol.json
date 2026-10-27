@@ -1,0 +1,180 @@
+{
+  "id": "ambush-main3-001",
+  "name": "Ambush",
+  "description": "Flip, draw, face-down.",
+  "author": "System",
+  "createdAt": "2026-10-27T00:00:00.000Z",
+  "color": "#5F9E6E",
+  "pattern": "chaos",
+  "category": "Main 3",
+  "cards": [
+    {
+      "value": 0,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "ambush-0-mid",
+          "params": {
+            "action": "draw",
+            "count": 3,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "conditional": {
+            "type": "then",
+            "thenEffect": {
+              "id": "ambush-0-mid-flip",
+              "params": {
+                "action": "flip",
+                "count": 1,
+                "optional": false,
+                "targetFilter": {
+                  "owner": "own",
+                  "position": "uncovered",
+                  "faceState": "face_down",
+                  "excludeSelf": false
+                }
+              },
+              "position": "middle",
+              "trigger": "on_play"
+            }
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Draw 3 cards. Flip 1 of your face-down cards.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 1,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "ambush-1-mid",
+          "params": {
+            "action": "flip_all_matching",
+            "valueMax": 1,
+            "drawPerFlip": true
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Flip all of your other cards with a value of 0 and 1. Draw 1 card for each card flipped.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 2,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "ambush-2-mid",
+          "params": {
+            "action": "shift",
+            "optional": false,
+            "targetFilter": {
+              "owner": "own",
+              "position": "covered",
+              "faceState": "any",
+              "calculation": "lowest_value"
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Shift your lowest value covered card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 3,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "ambush-3-mid",
+          "params": {
+            "action": "flip",
+            "count": 1,
+            "optional": false,
+            "targetFilter": {
+              "owner": "opponent",
+              "position": "covered",
+              "faceState": "face_up",
+              "excludeSelf": false,
+              "calculation": "highest_value"
+            }
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Flip your opponent's highest value face-up covered card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 4,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "ambush-4-mid",
+          "params": {
+            "action": "draw",
+            "count": 1,
+            "target": "self",
+            "source": "own_deck"
+          },
+          "position": "middle",
+          "trigger": "on_play",
+          "condition": {
+            "type": "has_uncovered_face_down"
+          }
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Draw 1 card if you have an uncovered face-down card.",
+        "bottom": ""
+      }
+    },
+    {
+      "value": 5,
+      "topEffects": [],
+      "middleEffects": [
+        {
+          "id": "ambush-5-discard",
+          "params": {
+            "action": "discard",
+            "count": 1,
+            "actor": "self"
+          },
+          "position": "middle",
+          "trigger": "on_play"
+        }
+      ],
+      "bottomEffects": [],
+      "text": {
+        "top": "",
+        "middle": "Discard 1 card.",
+        "bottom": ""
+      }
+    }
+  ]
+}

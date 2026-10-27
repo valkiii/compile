@@ -134,6 +134,7 @@ export class MoveGenerator {
             case 'select_lane_for_shift_all':
             case 'select_lane_for_delete':
             case 'select_lane_for_delete_all':
+            case 'select_lane_custom':
             case 'select_lane_for_play':
             case 'select_lane_for_return':
                 return this.genLaneSelection(state, action);
@@ -411,6 +412,8 @@ export class MoveGenerator {
         if (filter.faceState === 'face_down' && card.isFaceUp) return false;
         // Exclude self
         if (filter.excludeSelf && sourceCardId && card.id === sourceCardId) return false;
+        // Precomputed targets (Main 3)
+        if (filter.allowedIds && !filter.allowedIds.includes(card.id)) return false;
         // Value range - game rule: face-down cards have value 2 (effective value)
         if (filter.valueRange) {
             const value = card.isFaceUp ? card.value : 2;

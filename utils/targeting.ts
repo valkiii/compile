@@ -81,6 +81,10 @@ export const isCardTargetable = (card: PlayedCard, gameState: GameState): boolea
         return false; // Don't highlight other cards during lane selection
     }
 
+    // Main 3: precomputed target sets (highest / lowest value, value below the stack size, "other" card)
+    const precomputed = (actionRequired as any).targetFilter?.allowedIds as string[] | undefined;
+    if (precomputed && !precomputed.includes(card.id)) return false;
+
     switch (actionRequired.type) {
         case 'select_opponent_face_up_card_to_flip': {
             // Frost-1: Only face-up cards can be flipped (to face-down) - already face-up so OK
