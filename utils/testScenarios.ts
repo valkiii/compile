@@ -4896,3 +4896,18 @@ export const scenarioStacks: TestScenario = {
         return finalizeScenario(newState);
     }
 };
+
+/**
+ * Main 3: Sloth-0 draws 1 per line where the player is behind (opponent leads the left line)
+ */
+export const scenarioSloth0: TestScenario = {
+    name: "Sloth-0 draw",
+    description: "Opponent has a face-down card in the left line; play Sloth-0 face-up",
+    setup: (state: GameState) => {
+        let newState = initScenarioBase(state, ['Greed', 'Lust', 'Sloth'], ['Apathy', 'Pride', 'Wrath'], 'player', 'action');
+        newState.player.hand = [createCard('Sloth', 0, true), createCard('Greed', 2, true), createCard('Lust', 4, true), createCard('Sloth', 3, true), createCard('Greed', 0, true)];
+        newState = placeCard(newState, 'opponent', 0, createCard('Wrath', 3, false));
+        newState = recalculateAllLaneValues(newState);
+        return finalizeScenario(newState);
+    }
+};

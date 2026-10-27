@@ -324,6 +324,9 @@ export function executeDrawEffect(
             // Main 3 counts (Envy-2, Gluttony-2, Pride-2, Sloth-0, ...), else the fixed count
             const main3Count = computeMain3Count(countType, state, card, laneIndex, cardOwner);
             count = main3Count ?? (params.count || 1);
+            if (main3Count !== undefined && main3Count > 0) {
+                state = log(state, cardOwner, `${card.protocol}-${card.value}: count is ${main3Count} (lines ${state[cardOwner].laneValues.join('/')} vs ${state[cardOwner === 'player' ? 'opponent' : 'player'].laneValues.join('/')}).`);
+            }
             break;
         }
     }
@@ -332,7 +335,8 @@ export function executeDrawEffect(
     if (count <= 0) {
         // Main 3 counts ("lines where you have a lower total value", ...) can be 0: say so in the log
         if (computeMain3Count(countType, state, card, laneIndex, cardOwner) !== undefined) {
-            return { newState: log(state, cardOwner, `${card.protocol}-${card.value}: the count is 0, so no cards are drawn.`) };
+            const opp = cardOwner === 'player' ? 'opponent' : 'player';
+            return { newState: log(state, cardOwner, `${card.protocol}-${card.value}: the count is 0, so no cards are drawn (lines ${state[cardOwner].laneValues.join('/')} vs ${state[opp].laneValues.join('/')}).`) };
         }
         return { newState: state };
     }
