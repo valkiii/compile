@@ -179,6 +179,9 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
                 />
                 <label htmlFor="control-mechanic">Use Control Mechanic</label>
             </div>
+            {!useControl && cardSets.includes('Main 3') && (
+              <p className="mode-description control-note">Games with Main 3 protocols always use Control: their cards gain, lose and check it.</p>
+            )}
             <div className="control-mechanic-selector">
                 <input type="checkbox" id="confirm-moves" checked={confirmMoves} onChange={e => { setConfirmMovesState(e.target.checked); setConfirmMoves(e.target.checked); }} />
                 <label htmlFor="confirm-moves">Confirm moves</label>
