@@ -6,7 +6,6 @@
  */
 
 .card-front.has-art {
-    position: relative;
     isolation: isolate;
 }
 

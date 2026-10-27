@@ -4870,3 +4870,29 @@ export const scenarioCompileNow: TestScenario = {
         return finalizeScenario(newState);
     }
 };
+
+/**
+ * Showcase: tall mixed stacks on both sides (visual check of covered cards)
+ */
+export const scenarioStacks: TestScenario = {
+    name: "Tall stacks",
+    description: "Face-up and face-down cards stacked 3-4 high on both sides",
+    setup: (state: GameState) => {
+        let newState = initScenarioBase(state, ['Hate', 'Fire', 'Water'], ['Psychic', 'Death', 'Diversity'], 'player', 'action');
+        newState.player.hand = [createCard('Fire', 1, true), createCard('Water', 1, true)];
+        newState = placeCard(newState, 'player', 0, createCard('Hate', 5, true));
+        newState = placeCard(newState, 'player', 0, createCard('Fire', 2, false));
+        newState = placeCard(newState, 'player', 0, createCard('Hate', 4, true));
+        newState = placeCard(newState, 'player', 0, createCard('Water', 2, true));
+        newState = placeCard(newState, 'player', 1, createCard('Fire', 4, true));
+        newState = placeCard(newState, 'player', 1, createCard('Fire', 3, true));
+        newState = placeCard(newState, 'opponent', 1, createCard('Death', 3, true));
+        newState = placeCard(newState, 'opponent', 1, createCard('Psychic', 2, false));
+        newState = placeCard(newState, 'opponent', 1, createCard('Death', 4, true));
+        newState = placeCard(newState, 'opponent', 2, createCard('Diversity', 1, true));
+        newState = placeCard(newState, 'opponent', 2, createCard('Diversity', 3, true));
+        newState = placeCard(newState, 'opponent', 2, createCard('Death', 2, false));
+        newState = recalculateAllLaneValues(newState);
+        return finalizeScenario(newState);
+    }
+};

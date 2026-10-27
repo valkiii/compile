@@ -281,3 +281,8 @@
   margin-top: auto;
   padding: 1rem 0 0.5rem;
 }
+
+/* Several option checkboxes in a row group */
+.main-menu-start-group .control-mechanic-selector {
+  margin: 0.15rem 0;
+}

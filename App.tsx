@@ -45,7 +45,7 @@ export function App() {
   const [gameMode, setGameMode] = useState<GameMode>('standard');
   const [lossReason, setLossReason] = useState<string | null>(null);
   const [finalGameState, setFinalGameState] = useState<GameState | null>(null);
-  const [useControl, setUseControl] = useState(true);
+  const [useControl, setUseControl] = useState(false); // Control mechanic off by default
   const [startingPlayer, setStartingPlayer] = useState<Player>('player');
   const [coinToss, setCoinToss] = useState<CoinToss | null>(null);
   const [initialScenarioSetup, setInitialScenarioSetup] = useState<((state: GameState) => GameState) | null>(null);

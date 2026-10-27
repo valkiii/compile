@@ -170,3 +170,85 @@
     min-width: 28px;
     font-size: 0.5rem;
 }
+
+/* Card whose effect just fired */
+.card-component.is-triggering .card-front {
+    border-color: #ffd54a !important;
+    box-shadow: 0 0 0 2px #ffd54a, 0 0 22px 6px rgba(255, 213, 74, 0.75) !important;
+    animation: trigger-pulse 0.8s ease-in-out 2;
+}
+
+.card-component.is-triggering::after {
+    content: '⚡ effect';
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #ffd54a;
+    color: #1a113b;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 700;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+@keyframes trigger-pulse {
+    50% { box-shadow: 0 0 0 3px #ffd54a, 0 0 34px 10px rgba(255, 213, 74, 0.9); }
+}
+
+/* --- Move confirmation --- */
+.confirm-move {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(520px, 100%);
+    margin-bottom: 8px;
+    z-index: 70;
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #ffd54a;
+    background: var(--surface-color);
+    box-shadow: 0 0 18px rgba(255, 213, 74, 0.35), 0 10px 28px rgba(0, 0, 0, 0.7);
+    animation: fadeIn 0.15s ease-out;
+}
+
+.confirm-move-text {
+    color: var(--text-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.confirm-move-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.confirm-move .confirm-yes {
+    background: #ffd54a;
+    border-color: #ffd54a;
+    color: #1a113b;
+}
+
+.confirm-move .confirm-no {
+    border-color: var(--secondary-color);
+    color: var(--secondary-color);
+}
+
+.confirm-move-off {
+    background: none;
+    border: none;
+    color: var(--secondary-color);
+    font: inherit;
+    font-size: 0.7rem;
+    text-decoration: underline;
+    cursor: pointer;
+}

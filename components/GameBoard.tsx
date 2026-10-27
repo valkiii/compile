@@ -17,12 +17,13 @@ import { protocolStyle } from '../utils/protocolStyle';
 
 const protocolVars = (protocol: string): React.CSSProperties | undefined => {
     const identity = protocolStyle(protocol);
-    return identity ? ({ '--card-accent': identity.accent } as React.CSSProperties) : undefined;
+    return identity ? ({ '--card-accent': identity.accent, '--card-accent2': identity.accent2 } as React.CSSProperties) : undefined;
 };
 
 interface GameBoardProps {
     gameState: GameState;
     compact?: boolean;  // Phone layout: deck/trash live in the HUD instead of beside the lanes
+    triggeredCardIds?: Set<string>;  // Cards whose effect just fired (brief highlight)
     onLanePointerDown: (laneIndex: number, owner: Player) => void;
     onPlayFaceDown: (laneIndex: number) => void;
     onCardPointerDown: (card: PlayedCard, owner: Player, laneIndex: number) => void;
@@ -41,7 +42,7 @@ interface GameBoardProps {
     onTrashCardLeave?: () => void;
 }
 
-export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false, onLanePointerDown, onPlayFaceDown, onCardPointerDown, onCardPointerEnter, onCardPointerLeave, onOpponentHandCardPointerEnter, onOpponentHandCardPointerLeave, selectedCardId, sourceCardId, animatingCardIds, animatingCardInfo, onDeckClick, onTrashClick, onTrashCardHover, onTrashCardLeave }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false, triggeredCardIds, onLanePointerDown, onPlayFaceDown, onCardPointerDown, onCardPointerEnter, onCardPointerLeave, onOpponentHandCardPointerEnter, onOpponentHandCardPointerLeave, selectedCardId, sourceCardId, animatingCardIds, animatingCardInfo, onDeckClick, onTrashClick, onTrashCardHover, onTrashCardLeave }) => {
     const { player, opponent, phase, turn, compilableLanes, actionRequired, controlCardHolder } = gameState;
     const { currentAnimation } = useAnimationQueue();
 
@@ -515,6 +516,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false
                             gameState={gameState}
                             animatingCardIds={animatingCardIds}
                             animatingCardInfo={animatingCardInfo}
+                            triggeredCardIds={triggeredCardIds}
                         />
                     })}
                 </div>
@@ -594,6 +596,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false
                             gameState={gameState}
                             animatingCardIds={animatingCardIds}
                             animatingCardInfo={animatingCardInfo}
+                            triggeredCardIds={triggeredCardIds}
                         />
                     })}
                 </div>

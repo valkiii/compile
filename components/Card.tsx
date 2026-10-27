@@ -104,6 +104,7 @@ export const CardComponent: React.FC<CardProps> = ({
   }
   if (identity) {
     (customStyle as any)["--card-accent"] = identity.accent;
+    (customStyle as any)["--card-accent2"] = identity.accent2;
   }
 
   const artUrl = cardArtUrl(card.protocol, card.value);

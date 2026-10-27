@@ -49,6 +49,8 @@ import { playSound, soundForAnimation } from '../utils/sound';
 import { SoundToggle } from '../components/SoundToggle';
 import { EffectsOverlay } from '../components/EffectsOverlay';
 import { ZoomControls, loadZoom, saveZoom, useZoomGestures } from '../components/ZoomControls';
+import { ConfirmMove, PendingMove, confirmMovesEnabled } from '../components/ConfirmMove';
+import { haptic } from '../utils/haptics';
 import '../styles/layouts/tutorial.css';
 
 const SOLO_DECK_OUT_REASON = 'Your deck ran dry. In a Solo Deck Run your trash is never reshuffled.';
@@ -587,6 +589,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
     // Compiles are a chain of delete animations: thunder on the first, quiet after
     if (currentAnimation.compile === 'start') {
       playSound('compile');
+      haptic('strong');
       return;
     }
     if (currentAnimation.compile === 'continue') return;
@@ -599,6 +602,30 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
     }
     playSound(sound);
   }, [currentAnimation?.id]);
+
+  // Highlight the card whose effect just fired (log entries carry their source card, e.g. "Fire-3")
+  const [triggeredCardIds, setTriggeredCardIds] = useState<Set<string>>(new Set());
+  const triggerLogLengthRef = useRef(gameState.log.length);
+  useEffect(() => {
+    const fresh = gameState.log.slice(triggerLogLengthRef.current);
+    triggerLogLengthRef.current = gameState.log.length;
+    const names = new Set(fresh.map(e => e.sourceCard).filter((n): n is string => !!n));
+    if (names.size === 0) return;
+    const ids = new Set<string>();
+    for (const owner of ['player', 'opponent'] as Player[]) {
+      for (const lane of gameState[owner].lanes) {
+        for (const c of lane) if (c.isFaceUp && names.has(`${c.protocol}-${c.value}`)) ids.add(c.id);
+      }
+    }
+    if (ids.size === 0) return;
+    setTriggeredCardIds(prev => new Set([...prev, ...ids]));
+    const t = setTimeout(() => setTriggeredCardIds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.delete(id));
+      return next;
+    }), 1600);
+    return () => clearTimeout(t);
+  }, [gameState.log.length]);
 
   // NEW TOAST SYSTEM: Synchronized with animations
   // Effect 1: Show toast when animation with logMessage starts
@@ -691,6 +718,22 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
     };
   }, [gameState, onEndGame, setupTestScenario]);
 
+  // Mis-tap protection: moves wait for a confirmation (unless switched off)
+  const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  const confirmMove = (text: string, run: () => void) => {
+    if (!confirmMovesEnabled()) {
+      run();
+      return;
+    }
+    setPendingMove({ text, run });
+  };
+  useEffect(() => setPendingMove(null), [gameState.turn, gameState.actionRequired?.type]);
+  const cardLabel = (card: PlayedCard | undefined, owner: Player) =>
+    !card ? 'that card' : (card.isFaceUp || owner === 'player') ? `${card.protocol} ${card.value}${card.isFaceUp ? '' : ' (face-down)'}` : 'a face-down card';
+  const lineName = (laneIndex: number) => `the ${gameStateRef.current.player.protocols[laneIndex]} line`;
+  const actionVerb = (type: string | undefined) =>
+    !type ? 'Choose' : /flip/.test(type) ? 'Flip' : /delete/.test(type) ? 'Delete' : /return/.test(type) ? 'Return' : /shift/.test(type) ? 'Shift' : /discard/.test(type) ? 'Discard' : 'Choose';
+
   const handleLanePointerDown = (laneIndex: number, owner: Player) => {
     const currentState = gameStateRef.current;
     // Block input during animations (old system OR new queue system)
@@ -705,7 +748,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
             // Don't proceed, but also don't do anything else that could change state
             return;
         }
-        compileLane(laneIndex);
+        confirmMove(`Compile ${player.protocols[laneIndex]}?`, () => compileLane(laneIndex));
         return;
     }
 
@@ -715,7 +758,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
     // even though turn might still be set to 'opponent'.
     if (actionRequired && actionRequired.actor === 'player' &&
         LANE_SELECTION_ACTIONS.has(actionRequired.type)) {
-        resolveActionWithLane(laneIndex);
+        confirmMove(`${actionVerb(actionRequired.type) === 'Choose' ? 'Choose' : actionVerb(actionRequired.type) + ' to'} ${lineName(laneIndex)}?`, () => resolveActionWithLane(laneIndex));
         return;
     }
 
@@ -750,7 +793,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 return;
             }
             // Play on opponent's side (always face-up)
-            playSelectedCard(laneIndex, true, 'opponent');
+            confirmMove(`Play ${cardLabel(cardInHand, 'player')} face-up on your opponent's ${opponent.protocols[laneIndex]} line?`, () => playSelectedCard(laneIndex, true, 'opponent'));
             setHoveredCard(null);
             return;
         }
@@ -804,7 +847,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 cardInHand.protocol === opponent.protocols[laneIndex]
             ) && !opponentHasPsychic1;
         }
-        playSelectedCard(laneIndex, canPlayFaceUp);
+        confirmMove(`Play ${cardInHand.protocol} ${cardInHand.value} ${canPlayFaceUp ? 'face-up' : 'face-down'} in ${lineName(laneIndex)}?`, () => playSelectedCard(laneIndex, canPlayFaceUp));
         setHoveredCard(null);
         return;
     }
@@ -837,12 +880,14 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
     if (!selectedCard) return;
     if (phase !== 'action' || actionRequired || !player.hand.some(c => c.id === selectedCard)) return;
 
-    playSelectedCard(laneIndex, false);
+    const handCard = player.hand.find(c => c.id === selectedCard);
+    confirmMove(`Play ${handCard ? `${handCard.protocol} ${handCard.value}` : 'this card'} face-down in ${lineName(laneIndex)}?`, () => playSelectedCard(laneIndex, false));
     setHoveredCard(null);
   };
 
 
   const handleHandCardPointerDown = (card: PlayedCard) => {
+    haptic('tap');
     const currentState = gameStateRef.current;
     // Block input during animations (old system OR new queue system)
     if (isAnimating) return;
@@ -869,7 +914,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
           return;
         } else {
           // Single discard (count === 1)
-          discardCardFromHand(card.id);
+          confirmMove(`Discard ${card.protocol} ${card.value}?`, () => discardCardFromHand(card.id));
           return;
         }
       }
@@ -905,6 +950,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
   };
 
   const handleBoardCardPointerDown = (card: PlayedCard, owner: Player, laneIndex: number) => {
+      haptic('tap');
       const currentState = gameStateRef.current;
       // Block input during animations (old system OR new queue system)
       if (isAnimating) return;
@@ -928,7 +974,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
           if (actionRequired.type === 'select_own_highest_card_to_delete_for_hate_2' ||
               actionRequired.type === 'select_opponent_highest_card_to_delete_for_hate_2') {
               if (isCardTargetable(card, currentState)) {
-                  resolveActionWithCard(card.id);
+                  confirmMove(`${actionVerb(actionRequired.type)} ${cardLabel(card, owner)}?`, () => resolveActionWithCard(card.id));
                   return;
               }
           }
@@ -942,7 +988,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
 
       // If it's not a proxy, it's a card-specific interaction.
       if (isCardTargetable(card, currentState)) {
-          resolveActionWithCard(card.id);
+          confirmMove(`${actionVerb(actionRequired?.type)} ${cardLabel(card, owner)}?`, () => resolveActionWithCard(card.id));
       } else {
           // If a hand card was selected, but the click was on an invalid target card, deselect.
           if (selectedCard) {
@@ -1034,7 +1080,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
   const phaseController = (
     <PhaseController
       gameState={gameState}
-      onFillHand={fillHand}
+      onFillHand={() => confirmMove('Refresh (draw up to 5 cards)? This uses your turn.', fillHand)}
       onSkipAction={skipAction}
       onResolveOptionalDrawPrompt={resolveOptionalDrawPrompt}
       onResolveOptionalDiscardCustomPrompt={resolveOptionalDiscardCustomPrompt}
@@ -1238,6 +1284,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 <GameBoard
                   gameState={visualGameState}
                   compact={isCompact}
+                  triggeredCardIds={triggeredCardIds}
                   onLanePointerDown={handleLanePointerDown}
                   onPlayFaceDown={handlePlayFaceDown}
                   selectedCardId={isAnimating ? null : selectedCard}
@@ -1264,7 +1311,8 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 />
                 
                 <div className="player-action-area">
-                  {mode === 'tutorial' && (
+                  {pendingMove && <ConfirmMove move={pendingMove} onDone={() => setPendingMove(null)} />}
+                  {mode === 'tutorial' && !pendingMove && (
                     <CoachHints gameState={gameState} selectedCardId={selectedCard} isAnimating={isAnimating || showCoinFlip} />
                   )}
                   {isCompact ? (

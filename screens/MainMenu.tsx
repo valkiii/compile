@@ -11,6 +11,8 @@ import { Difficulty, GameMode } from '../types';
 import { isCustomProtocolEnabled, setCustomProtocolEnabled } from '../utils/customProtocolSettings';
 import { hasSeenTutorial } from '../utils/tutorialProgress';
 import { checkOwnerNetwork } from '../multiplayer/ownerNetwork';
+import { confirmMovesEnabled, setConfirmMoves } from '../components/ConfirmMove';
+import { haptic, hapticsEnabled, setHaptics } from '../utils/haptics';
 
 interface MainMenuProps {
   onNavigate: (screen: 'ProtocolSelection' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules' | 'Tutorial' | 'OnlineLobby') => void;
@@ -28,6 +30,8 @@ interface MainMenuProps {
 
 export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, onUseControlChange, gameMode, setGameMode, resumableOnlineRoom, onResumeOnline }: MainMenuProps) {
   const [showTutorialNudge] = useState(() => !hasSeenTutorial());
+  const [confirmMoves, setConfirmMovesState] = useState(confirmMovesEnabled);
+  const [vibration, setVibration] = useState(hapticsEnabled);
   // Online play is only offered on the owner's own devices (on the tailnet); guests use invite links
   const [onOwnerNetwork, setOnOwnerNetwork] = useState(false);
   useEffect(() => {
@@ -149,6 +153,14 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
                     onChange={(e) => onUseControlChange(e.target.checked)}
                 />
                 <label htmlFor="control-mechanic">Use Control Mechanic</label>
+            </div>
+            <div className="control-mechanic-selector">
+                <input type="checkbox" id="confirm-moves" checked={confirmMoves} onChange={e => { setConfirmMovesState(e.target.checked); setConfirmMoves(e.target.checked); }} />
+                <label htmlFor="confirm-moves">Confirm moves</label>
+            </div>
+            <div className="control-mechanic-selector">
+                <input type="checkbox" id="haptics" checked={vibration} onChange={e => { setVibration(e.target.checked); setHaptics(e.target.checked); if (e.target.checked) haptic(); }} />
+                <label htmlFor="haptics">Vibration</label>
             </div>
             <button className="btn btn-start" onClick={() => onNavigate('ProtocolSelection')}>
               {isSolo ? 'Start Solo Run' : 'Start Game'}

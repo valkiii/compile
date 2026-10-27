@@ -10,7 +10,6 @@
     --motif: color-mix(in srgb, var(--accent, var(--card-accent)) 30%, transparent);
     background-image: none !important;
     isolation: isolate;
-    position: relative;
 }
 
 .card-component.has-motif .card-front::before {
@@ -205,4 +204,37 @@
     .game-board .protocol-display.has-identity.compiled .badge-text {
         display: none;
     }
+}
+
+/* --- Second colour per protocol: pattern, header blend, inner ring --- */
+.card-component.has-motif .card-front {
+    --motif: color-mix(in srgb, var(--card-accent2, var(--accent)) 34%, transparent);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 0 2px color-mix(in srgb, var(--card-accent2) 70%, transparent) !important;
+}
+
+.card-component.has-motif:not(.motif-rainbow) .card-front .card-protocol {
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--accent) 80%, #0a051a) 0%,
+        color-mix(in srgb, var(--accent) 80%, #0a051a) 55%,
+        color-mix(in srgb, var(--card-accent2) 75%, #0a051a) 100%);
+}
+
+.card-component.has-motif .card-front .card-value {
+    border-left-color: var(--card-accent2);
+}
+
+.card-component.has-motif .card-glyph-mark {
+    color: var(--card-accent2);
+}
+
+.game-board .protocol-display.has-identity {
+    --motif: color-mix(in srgb, var(--card-accent2) 26%, transparent);
+    box-shadow: inset 3px 0 0 var(--accent), inset 6px 0 0 var(--card-accent2);
+}
+
+.game-board .protocol-display.has-identity.compiled {
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--accent) 80%, #0a051a),
+        color-mix(in srgb, var(--accent) 70%, #0a051a) 70%,
+        color-mix(in srgb, var(--card-accent2) 65%, #0a051a)) !important;
 }

@@ -28,9 +28,10 @@ interface LaneProps {
     animatingCardIds?: Set<string>;  // Card IDs being animated (should be hidden)
     animatingCardInfo?: { cardId: string; fromPosition: CardPosition } | null;  // Extended info for shift animation hiding
     compact?: boolean;
+    triggeredCardIds?: Set<string>;
 }
 
-export const Lane: React.FC<LaneProps> = ({ cards, isPlayable, isCompilable, isShiftTarget, isEffectTarget, isMatching, onLanePointerDown, onPlayFaceDown, onCardPointerDown, onCardPointerEnter, onCardPointerLeave, owner, isCardTargetable, laneIndex, sourceCardId, gameState, animatingCardIds, animatingCardInfo, compact }) => {
+export const Lane: React.FC<LaneProps> = ({ cards, isPlayable, isCompilable, isShiftTarget, isEffectTarget, isMatching, onLanePointerDown, onPlayFaceDown, onCardPointerDown, onCardPointerEnter, onCardPointerLeave, owner, isCardTargetable, laneIndex, sourceCardId, gameState, animatingCardIds, animatingCardInfo, compact, triggeredCardIds }) => {
 
     const laneClasses = ['lane'];
     if (isPlayable) laneClasses.push('playable');
@@ -101,7 +102,7 @@ export const Lane: React.FC<LaneProps> = ({ cards, isPlayable, isCompilable, isS
                                     isTargetable={isCardTargetable(card)}
                                     isSourceOfEffect={card.id === sourceCardId}
                                     faceDownValue={faceDownValue}
-                                    additionalClassName={isBeingAnimated ? 'animating-hidden' : undefined}
+                                    additionalClassName={[isBeingAnimated ? 'animating-hidden' : '', triggeredCardIds?.has(card.id) ? 'is-triggering' : ''].filter(Boolean).join(' ') || undefined}
                                 />
                             );
                         });
