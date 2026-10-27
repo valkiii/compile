@@ -1803,3 +1803,11 @@
 .deck-play-preview-card {
   transform: scale(0.85);
 }
+
+/* Touch screens keep :hover on the last tapped element: don't let it look selected */
+@media (hover: none) {
+  .btn:hover:not(.active):not(:disabled) {
+    background-color: transparent;
+    color: var(--primary-color);
+  }
+}

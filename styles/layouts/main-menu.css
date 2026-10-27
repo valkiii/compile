@@ -286,3 +286,18 @@
 .main-menu-start-group .control-mechanic-selector {
   margin: 0.15rem 0;
 }
+
+/* Card sets (multi-select chips) */
+.card-set-options {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card-set-options .btn {
+  flex: 0 1 auto;
+  min-width: 4.5rem;
+}
+
+.card-set-warning {
+  color: var(--danger-color) !important;
+}

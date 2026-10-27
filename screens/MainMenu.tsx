@@ -13,6 +13,7 @@ import { hasSeenTutorial } from '../utils/tutorialProgress';
 import { checkOwnerNetwork } from '../multiplayer/ownerNetwork';
 import { confirmMovesEnabled, setConfirmMoves } from '../components/ConfirmMove';
 import { haptic, hapticsEnabled, setHaptics } from '../utils/haptics';
+import { CARD_SETS, MIN_PROTOCOLS, countProtocolsInSets, getCardSets, setCardSets } from '../utils/cardSets';
 
 interface MainMenuProps {
   onNavigate: (screen: 'ProtocolSelection' | 'CardLibrary' | 'Statistics' | 'CustomProtocols' | 'Rules' | 'Tutorial' | 'OnlineLobby') => void;
@@ -32,6 +33,15 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
   const [showTutorialNudge] = useState(() => !hasSeenTutorial());
   const [confirmMoves, setConfirmMovesState] = useState(confirmMovesEnabled);
   const [vibration, setVibration] = useState(hapticsEnabled);
+  const [cardSets, setCardSetsState] = useState<string[]>(getCardSets);
+  const protocolCount = countProtocolsInSets(cardSets);
+  const tooFewProtocols = protocolCount < MIN_PROTOCOLS;
+  const toggleCardSet = (set: string) => {
+    const next = cardSets.includes(set) ? cardSets.filter(s => s !== set) : [...cardSets, set];
+    if (next.length === 0) return;
+    setCardSetsState(next);
+    setCardSets(next);
+  };
   // Online play is only offered on the owner's own devices (on the tailnet); guests use invite links
   const [onOwnerNetwork, setOnOwnerNetwork] = useState(false);
   useEffect(() => {
@@ -137,6 +147,21 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
                   : 'Draft protocols against the AI (1-2-2-1). First to compile all 3 protocols wins.'}
               </p>
             </div>
+            <div className="difficulty-selector card-set-selector">
+              <h3 className="difficulty-title">Card sets</h3>
+              <div className="difficulty-options card-set-options">
+                {CARD_SETS.map(set => (
+                  <button key={set} className={`btn ${cardSets.includes(set) ? 'active' : ''}`} aria-pressed={cardSets.includes(set)} onClick={() => toggleCardSet(set)}>
+                    {set === 'Fan-Content' ? 'Fan' : set}
+                  </button>
+                ))}
+              </div>
+              <p className={`mode-description ${tooFewProtocols ? 'card-set-warning' : ''}`}>
+                {tooFewProtocols
+                  ? `Only ${protocolCount} protocols in these sets: pick sets with at least ${MIN_PROTOCOLS}.`
+                  : `${protocolCount} protocols to draft from.`}
+              </p>
+            </div>
             <div className="difficulty-selector">
               <h3 className="difficulty-title">Difficulty</h3>
               <div className="difficulty-options">
@@ -162,7 +187,7 @@ export function MainMenu({ onNavigate, difficulty, setDifficulty, useControl, on
                 <input type="checkbox" id="haptics" checked={vibration} onChange={e => { setVibration(e.target.checked); setHaptics(e.target.checked); if (e.target.checked) haptic(); }} />
                 <label htmlFor="haptics">Vibration</label>
             </div>
-            <button className="btn btn-start" onClick={() => onNavigate('ProtocolSelection')}>
+            <button className="btn btn-start" disabled={tooFewProtocols} onClick={() => onNavigate('ProtocolSelection')}>
               {isSolo ? 'Start Solo Run' : 'Start Game'}
             </button>
             {onOwnerNetwork && (

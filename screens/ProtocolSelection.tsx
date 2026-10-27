@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { getCardSets } from '../utils/cardSets';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from '../components/Header';
 import { Card as CardData } from '../data/cards';
@@ -104,28 +105,8 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
     return Array.from(protocolSet).sort();
   }, [cards]);
 
-  // Get all unique categories dynamically
-  const allCategories = useMemo(() => {
-    const categorySet = new Set(cards.map(card => card.category));
-    return Array.from(categorySet).sort();
-  }, [cards]);
-
-  // Categories that should be disabled by default
-  const defaultDisabledCategories = ['Fan-Content', 'Main 2', 'Main 3', 'Aux 2'];
-
-  // Filter state - by default Fan-Content, Main 2, and Aux 2 are disabled
-  const [enabledCategories, setEnabledCategories] = useState<Set<string>>(new Set());
-  const [hasInitialized, setHasInitialized] = useState(false);
-
-  // Initialize enabled categories once when allCategories is populated
-  useEffect(() => {
-    if (allCategories.length > 0 && !hasInitialized) {
-      const enabled = new Set(allCategories);
-      defaultDisabledCategories.forEach(cat => enabled.delete(cat));
-      setEnabledCategories(enabled);
-      setHasInitialized(true);
-    }
-  }, [allCategories, hasInitialized]);
+  // Card sets come from the main menu (utils/cardSets); custom protocols ('Custom') stay available
+  const [enabledCategories] = useState<Set<string>>(() => new Set([...getCardSets(), 'Custom']));
 
   // Get category for a protocol
   const getProtocolCategory = (protocol: string): string => {
@@ -160,17 +141,6 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
     });
   }, [enabledCategories]);
 
-  const toggleCategory = (category: string) => {
-    setEnabledCategories(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(category)) {
-        newSet.delete(category);
-      } else {
-        newSet.add(category);
-      }
-      return newSet;
-    });
-  };
 
   const currentStepInfo = SELECTION_STEPS[step];
   const isPlayerTurn = currentStepInfo?.player === 'Player';
@@ -405,20 +375,6 @@ export function ProtocolSelection({ mode = 'standard', onBack, onStartGame }: Pr
         
         <div className="protocol-grid-container">
           <p>{getStatusMessage()}</p>
-
-          {/* Category Filters */}
-          <div className="category-filters">
-            {allCategories.map(category => (
-              <label key={category} className="category-filter-item">
-                <input
-                  type="checkbox"
-                  checked={enabledCategories.has(category)}
-                  onChange={() => toggleCategory(category)}
-                />
-                <span>{category}</span>
-              </label>
-            ))}
-          </div>
 
           {/* Scrollable wrapper for protocol grid - max 3 rows visible */}
           <div className="protocol-grid-scroll-wrapper">

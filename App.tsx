@@ -87,10 +87,12 @@ export function App() {
     };
   }, []);
 
-  // Load default custom protocols on app start (Anarchy_custom for testing)
-  useEffect(() => {
+  // Load default custom protocols on app start - before the first render, so the menu's
+  // card-set protocol count is right on a first visit
+  useState(() => {
     loadDefaultCustomProtocols();
-  }, []);
+    return true;
+  });
 
   // E2E TEST SUPPORT: Load test scenario from URL parameter
   // Usage: http://localhost:3000/?testScenario=basic-game (JSON file)

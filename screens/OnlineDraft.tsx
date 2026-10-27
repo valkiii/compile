@@ -6,6 +6,7 @@
  * The host owns the draft state and broadcasts it; the guest sends its picks.
  */
 
+import { getCardSets } from '../utils/cardSets';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Header } from '../components/Header';
@@ -29,7 +30,6 @@ interface OnlineDraftProps {
     onLeave: () => void;
 }
 
-const DEFAULT_OFF = ['Fan-Content', 'Main 2', 'Main 3', 'Aux 2'];
 
 function useSystemCards(): CardData[] {
     return useMemo(() => {
@@ -53,7 +53,8 @@ export function OnlineDraft({ client, role, useControl, onStart, onLeave }: Onli
         step: 0,
         hostPicks: [],
         guestPicks: [],
-        categories: allCategories.filter(c => !DEFAULT_OFF.includes(c)),
+        // Default: the sets chosen on the main menu (the host can still change them here)
+        categories: allCategories.filter(c => getCardSets().includes(c)),
     }));
     const [selection, setSelection] = useState<string[]>([]);
     // The guest only knows the toss result once the host's draft arrives
