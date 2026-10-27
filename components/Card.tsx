@@ -12,6 +12,7 @@ import { protocolStyle } from "../utils/protocolStyle";
 interface CardProps {
   card: PlayedCard;
   onPointerDown?: (event: React.PointerEvent) => void;
+  onClick?: (event: React.MouseEvent) => void;
   onPointerEnter?: (event: React.PointerEvent) => void;
   onPointerLeave?: (event: React.PointerEvent) => void;
   isFaceUp: boolean;
@@ -28,6 +29,7 @@ interface CardProps {
 export const CardComponent: React.FC<CardProps> = ({
   card,
   onPointerDown,
+  onClick,
   onPointerEnter,
   onPointerLeave,
   isFaceUp,
@@ -113,10 +115,11 @@ export const CardComponent: React.FC<CardProps> = ({
     <div
       className={classNames.join(" ")}
       onPointerDown={onPointerDown}
+      onClick={onClick}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
       role="button"
-      tabIndex={onPointerDown ? 0 : -1}
+      tabIndex={onPointerDown || onClick ? 0 : -1}
       style={customStyle}
     >
       <div className={`card-inner ${!isFaceUp ? "is-flipped" : ""}`}>

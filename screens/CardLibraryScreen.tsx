@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useIsCompact } from '../hooks/useIsCompact';
+import { CardDetailSheet } from '../components/CardDetailSheet';
 import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { CardComponent } from '../components/Card';
@@ -57,6 +59,8 @@ export function CardLibraryScreen({ onBack }: CardLibraryScreenProps) {
   }, [cards]);
 
   const [previewCard, setPreviewCard] = useState<CardData | null>(null);
+  const isCompact = useIsCompact();
+  const [detailCard, setDetailCard] = useState<CardData | null>(null);
 
   // Get all unique categories dynamically
   const allCategories = useMemo(() => {
@@ -132,15 +136,18 @@ export function CardLibraryScreen({ onBack }: CardLibraryScreenProps) {
   };
 
   return (
-    <div className="screen card-library-screen">
+    <div className={`screen card-library-screen ${isCompact ? 'compact' : ''}`}>
       <Header title="Card Library" onBack={onBack} />
       <div className="card-library-layout">
-        <div className="game-preview-container">
-          <h2>Card Preview</h2>
-          <div className="preview-card-area">
-            {renderPreview()}
+        {/* Phones: no side preview (it filled the whole screen); tapping a card opens the detail sheet */}
+        {!isCompact && (
+          <div className="game-preview-container">
+            <h2>Card Preview</h2>
+            <div className="preview-card-area">
+              {renderPreview()}
+            </div>
           </div>
-        </div>
+        )}
         <div className="card-list-container">
           {/* Category Filters */}
           <div className="category-filters">
@@ -175,8 +182,9 @@ export function CardLibraryScreen({ onBack }: CardLibraryScreenProps) {
                       card={cardForComponent}
                       isFaceUp={true}
                       additionalClassName="in-hand"
-                      onPointerEnter={() => handleCardInteraction(card)}
-                      onPointerDown={() => handleCardInteraction(card)}
+                      onPointerEnter={isCompact ? undefined : () => handleCardInteraction(card)}
+                      onPointerDown={isCompact ? undefined : () => handleCardInteraction(card)}
+                      onClick={isCompact ? () => setDetailCard(card) : undefined}
                     />
                   );
                 })}
@@ -185,6 +193,14 @@ export function CardLibraryScreen({ onBack }: CardLibraryScreenProps) {
           ))}
         </div>
       </div>
+      {isCompact && detailCard && (
+        <CardDetailSheet
+          card={{ ...detailCard, id: 'detail', isFaceUp: true }}
+          showContents={true}
+          withBackdrop={true}
+          onClose={() => setDetailCard(null)}
+        />
+      )}
     </div>
   );
 }

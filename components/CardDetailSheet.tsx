@@ -14,6 +14,8 @@ interface CardDetailSheetProps {
     card: PlayedCard;
     showContents: boolean;
     onClose: () => void;
+    /** Dim the page behind and close on any tap (used outside the game board) */
+    withBackdrop?: boolean;
 }
 
 const SECTIONS: { key: 'top' | 'middle' | 'bottom'; label: string; hint: string }[] = [
@@ -22,11 +24,13 @@ const SECTIONS: { key: 'top' | 'middle' | 'bottom'; label: string; hint: string 
     { key: 'bottom', label: 'Bottom', hint: 'Only while uncovered' },
 ];
 
-export const CardDetailSheet: React.FC<CardDetailSheetProps> = ({ card, showContents, onClose }) => {
+export const CardDetailSheet: React.FC<CardDetailSheetProps> = ({ card, showContents, onClose, withBackdrop }) => {
     const style = card.color ? ({ '--card-custom-color': card.color } as React.CSSProperties) : undefined;
 
     return (
-        <div className="card-detail-sheet" onPointerDown={onClose} role="dialog" aria-label="Card details">
+        <>
+        {withBackdrop && <div className="card-detail-backdrop" onPointerDown={onClose} aria-hidden="true" />}
+        <div className={`card-detail-sheet ${withBackdrop ? 'centered' : ''}`} onPointerDown={onClose} role="dialog" aria-label="Card details">
             <div className={`card-detail-panel card-protocol-${card.protocol.toLowerCase()}`} style={style}>
                 {showContents ? (
                     <>
@@ -58,5 +62,6 @@ export const CardDetailSheet: React.FC<CardDetailSheetProps> = ({ card, showCont
                 <span className="card-detail-dismiss">tap to close</span>
             </div>
         </div>
+        </>
     );
 };
