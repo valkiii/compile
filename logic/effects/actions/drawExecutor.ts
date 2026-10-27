@@ -330,6 +330,10 @@ export function executeDrawEffect(
 
     // Prevent drawing 0 or negative cards
     if (count <= 0) {
+        // Main 3 counts ("lines where you have a lower total value", ...) can be 0: say so in the log
+        if (computeMain3Count(countType, state, card, laneIndex, cardOwner) !== undefined) {
+            return { newState: log(state, cardOwner, `${card.protocol}-${card.value}: the count is 0, so no cards are drawn.`) };
+        }
         return { newState: state };
     }
 

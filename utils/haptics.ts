@@ -45,11 +45,43 @@ function iosTick() {
     iosLabel.click();
 }
 
+// iOS only lets the switch trick buzz inside a user activation, and for touch input that is
+// touchend - not touchstart/pointerdown, where card taps are handled. Ticks requested while
+// a finger is down are played when it lifts.
+let touchActive = false;
+let pendingTicks = 0;
+let listening = false;
+
+function listenForTouches() {
+    if (listening || typeof document === 'undefined') return;
+    listening = true;
+    document.addEventListener('touchstart', () => { touchActive = true; }, { capture: true, passive: true });
+    const flush = () => {
+        touchActive = false;
+        const n = pendingTicks;
+        pendingTicks = 0;
+        if (n > 0) {
+            try {
+                iosTick();
+            } catch {
+                // ignore
+            }
+        }
+    };
+    document.addEventListener('touchend', flush, { capture: true, passive: true });
+    document.addEventListener('touchcancel', () => { touchActive = false; pendingTicks = 0; }, { capture: true, passive: true });
+}
+
 export function haptic(kind: 'tap' | 'strong' = 'tap') {
     if (!enabled) return;
     try {
         if (typeof navigator.vibrate === 'function') {
             navigator.vibrate(kind === 'strong' ? [30, 50, 70] : 12);
+            return;
+        }
+        listenForTouches();
+        if (touchActive) {
+            pendingTicks++;
             return;
         }
         iosTick();
@@ -60,4 +92,9 @@ export function haptic(kind: 'tap' | 'strong' = 'tap') {
     } catch {
         // haptics are a nice-to-have
     }
+}
+
+/** Start tracking touches early so the very first card tap can buzz. */
+export function initHaptics() {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate !== 'function') listenForTouches();
 }

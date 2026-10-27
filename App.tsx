@@ -18,6 +18,7 @@ import { OnlineDraft } from './screens/OnlineDraft';
 import { RelayClient, Role, loadSavedSession, setOwnerKey, relayHttpBase } from './multiplayer/relayClient';
 import { setCardArtSource } from './data/cardArt';
 import { unlockAudio } from './utils/sound';
+import { initHaptics } from './utils/haptics';
 import { takeFragmentParams } from './multiplayer/invite';
 import { OnlineGameSetup, isOnlineMessage } from './multiplayer/messages';
 import { clearHostGame, loadHostGame, saveHostGame } from './multiplayer/savedGame';
@@ -75,9 +76,15 @@ export function App() {
 
   // iOS only plays audio after a user gesture: unlock on every tap (cheap, idempotent)
   useEffect(() => {
+    // (on touch screens the gesture counts on touchend, not pointerdown)
     const unlock = () => unlockAudio();
+    initHaptics();
     window.addEventListener('pointerdown', unlock);
-    return () => window.removeEventListener('pointerdown', unlock);
+    window.addEventListener('touchend', unlock, { passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('touchend', unlock);
+    };
   }, []);
 
   // Load default custom protocols on app start (Anarchy_custom for testing)
