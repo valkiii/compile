@@ -455,6 +455,39 @@
         border-radius: 16px 16px 0 0 !important;
     }
 
+    /* Game log: the two 180px card-preview columns left no room for the text on a phone */
+    .log-modal-content .log-preview-area {
+        display: none;
+    }
+
+    .log-modal-content .log-content-wrapper {
+        display: block;
+    }
+
+    .log-modal-content .log-list,
+    .log-modal-with-preview .log-list {
+        width: 100%;
+        max-height: calc(88dvh - 6rem);
+        overflow-y: auto;
+        padding-right: 0;
+        margin: 0;
+        font-size: 0.82rem;
+    }
+
+    .log-modal-content .log-entry {
+        padding-left: 2.1rem;
+    }
+
+    .log-modal-content .log-entry::before {
+        width: 1.7rem;
+    }
+
+    .log-modal-content .modal-close-btn {
+        margin-right: 0;
+        position: relative;
+        z-index: 3;
+    }
+
     .toaster-container {
         top: calc(env(safe-area-inset-top, 0px) + 48px);
         width: calc(100% - 24px);
