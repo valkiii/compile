@@ -183,8 +183,10 @@ def _http(status, reason, body=b"", content_type="text/plain", cache="no-store")
     return Response(status, reason, headers, body)
 
 
-def serve_art(connection, request):
+def serve_art(connection, request, private=False):
     """GET .../art/<protocol>-<value>.webp?room=…&token=… for the two players of a live room.
+    On the private (tailnet-only) door no room is needed: only the owner's devices reach it,
+    so they get the art in every game (also against the computer).
     Anything that isn't an art request continues as a normal WebSocket handshake."""
     url = urlsplit(request.path)
     m = ART_NAME.search(url.path)
@@ -193,12 +195,13 @@ def serve_art(connection, request):
     addr = client_address(connection, request)
     if not ART_DIR or rate_limited(addr):
         return _http(404, "Not Found")
-    q = parse_qs(url.query)
-    room = rooms.get((q.get("room") or [""])[0].upper())
-    token = (q.get("token") or [""])[0].encode()
-    if room is None or not any(t and secrets.compare_digest(token, t.encode()) for t in room.tokens.values()):
-        record_failure(addr)
-        return _http(403, "Forbidden")
+    if not private:
+        q = parse_qs(url.query)
+        room = rooms.get((q.get("room") or [""])[0].upper())
+        token = (q.get("token") or [""])[0].encode()
+        if room is None or not any(t and secrets.compare_digest(token, t.encode()) for t in room.tokens.values()):
+            record_failure(addr)
+            return _http(403, "Forbidden")
     path = os.path.join(ART_DIR, m.group(1))  # name is whitelisted by the regex: no path tricks
     try:
         with open(path, "rb") as f:
@@ -206,6 +209,10 @@ def serve_art(connection, request):
     except OSError:
         return _http(404, "Not Found")
     return _http(200, "OK", body, "image/webp", "private, max-age=86400")
+
+
+def serve_art_private(connection, request):
+    return serve_art(connection, request, private=True)
 
 
 async def public_handler(ws):
@@ -373,9 +380,9 @@ async def main():
         log.warning("OWNER_KEY is not set: nobody can create rooms")
     load_state()
     asyncio.create_task(reaper())
-    opts = dict(max_size=MAX_MESSAGE, ping_interval=20, ping_timeout=40, process_request=serve_art)
-    async with websockets.serve(public_handler, HOST, PORT, **opts), \
-            websockets.serve(private_handler, HOST, PRIVATE_PORT, **opts):
+    opts = dict(max_size=MAX_MESSAGE, ping_interval=20, ping_timeout=40)
+    async with websockets.serve(public_handler, HOST, PORT, process_request=serve_art, **opts), \
+            websockets.serve(private_handler, HOST, PRIVATE_PORT, process_request=serve_art_private, **opts):
         log.info("relay listening on %s:%d (public, join only) and %s:%d (tailnet, create)", HOST, PORT, HOST, PRIVATE_PORT)
         await asyncio.Future()
 

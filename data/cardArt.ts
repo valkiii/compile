@@ -7,8 +7,8 @@
  * illustration use the protocol artwork ("<protocol>-0.webp").
  *
  * The images are NOT part of the public site: they live on the owner's relay server and are
- * only handed out to the two players of a live online room (room code + player token).
- * Outside online games cards show no art.
+ * only handed out to the two players of a live online room (room code + player token), and to the
+ * owner's own devices on the tailnet (private door) in every game. Everyone else sees no art.
  */
 
 interface ArtSource {
@@ -18,14 +18,22 @@ interface ArtSource {
 }
 
 let source: ArtSource | null = null;
+/** Relay's private (tailnet-only) door: set when this is one of the owner's devices. */
+let ownerBase: string | null = null;
 
 /** Set while in an online room; null everywhere else. */
 export function setCardArtSource(next: ArtSource | null) {
     source = next;
 }
 
+/** On the owner's devices (tailnet) the private door serves art in every game, also against the computer. */
+export function setOwnerArtBase(base: string | null) {
+    ownerBase = base;
+}
+
 const artUrl = (file: string) =>
-    source ? `${source.base}/art/${file}?room=${encodeURIComponent(source.room)}&token=${encodeURIComponent(source.token)}` : null;
+    source ? `${source.base}/art/${file}?room=${encodeURIComponent(source.room)}&token=${encodeURIComponent(source.token)}`
+        : ownerBase ? `${ownerBase}/art/${file}` : null;
 
 const CARD_ART: Record<string, number[]> = {
     apathy: [0, 1, 2, 3, 4, 5, 6],
@@ -54,7 +62,7 @@ const CARD_ART: Record<string, number[]> = {
 /** URL of a card's illustration, or null when the protocol has no art (Main 2 / Aux 2 / fan protocols). */
 export function cardArtUrl(protocol: string, value: number): string | null {
     const values = CARD_ART[protocol.toLowerCase()];
-    if (!source || !values) return null;
+    if ((!source && !ownerBase) || !values) return null;
     const v = values.includes(value) ? value : 0;
     return artUrl(`${protocol.toLowerCase()}-${v}.webp`);
 }
@@ -64,6 +72,6 @@ export function cardArtUrl(protocol: string, value: number): string | null {
  * through a CSS variable, where relative URLs would resolve against the stylesheet).
  */
 export function protocolTileUrl(protocol: string): string | null {
-    if (!source || !CARD_ART[protocol.toLowerCase()]) return null;
+    if ((!source && !ownerBase) || !CARD_ART[protocol.toLowerCase()]) return null;
     return artUrl(`${protocol.toLowerCase()}-tile.webp`);
 }

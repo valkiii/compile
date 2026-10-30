@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { checkOwnerNetwork } from './multiplayer/ownerNetwork';
 import React, { useState, useEffect, useCallback } from 'react';
 import { MainMenu } from './screens/MainMenu';
 import { ProtocolSelection, CoinToss } from './screens/ProtocolSelection';
@@ -16,7 +17,7 @@ import { TutorialScreen } from './screens/TutorialScreen';
 import { OnlineLobby } from './screens/OnlineLobby';
 import { OnlineDraft } from './screens/OnlineDraft';
 import { RelayClient, Role, loadSavedSession, setOwnerKey, relayHttpBase } from './multiplayer/relayClient';
-import { setCardArtSource } from './data/cardArt';
+import { setCardArtSource, setOwnerArtBase } from './data/cardArt';
 import { unlockAudio } from './utils/sound';
 import { initHaptics } from './utils/haptics';
 import { takeFragmentParams } from './multiplayer/invite';
@@ -73,6 +74,16 @@ export function App() {
     // Invite links open the lobby straight away
     if (fragment.invite) setScreen('OnlineLobby');
   }, [fragment]);
+
+  // Owner's devices (on the tailnet) see the official card art in every game, also against the computer
+  const [, setArtReady] = useState(false);
+  useEffect(() => {
+    checkOwnerNetwork().then(ok => {
+      if (!ok) return;
+      setOwnerArtBase(relayHttpBase('host'));
+      setArtReady(true);
+    });
+  }, []);
 
   // iOS only plays audio after a user gesture: unlock on every tap (cheap, idempotent)
   useEffect(() => {
