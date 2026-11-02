@@ -20,6 +20,7 @@ interface PhaseControllerProps {
     onResolveCustomChoice: (optionIndex: number) => void;
     selectedCardId: string | null;
     multiSelectedCardIds: string[];
+    onDiscardSingle: (cardId: string) => void;
     actionRequiredClass: string;
     // Während Animationen: zeige nur Snapshot-Turn/Phase, keine interaktiven Elemente
     isAnimating?: boolean;
@@ -32,7 +33,7 @@ export const PhaseController: React.FC<PhaseControllerProps> = ({
     onResolveOptionalDiscardCustomPrompt, onResolveOptionalEffectPrompt,
     onResolveVariableDiscard, onResolveRevealBoardCardPrompt, onResolveOptionalDrawPrompt,
     onResolveControlMechanicPrompt, onResolveCustomChoice,
-    selectedCardId, multiSelectedCardIds, actionRequiredClass,
+    selectedCardId, multiSelectedCardIds, onDiscardSingle, actionRequiredClass,
     isAnimating, snapshotTurn, snapshotPhase
 }) => {
     const { phase, turn, actionRequired, player, compilableLanes } = gameState;
@@ -177,6 +178,18 @@ export const PhaseController: React.FC<PhaseControllerProps> = ({
             const discardCount = actionRequired.count;
             const isVariableCount = (actionRequired as any).variableCount;
             // Show confirm button for batch discard (count > 1) or variable count
+            if (discardCount === 1 && !isVariableCount) {
+                // Single discard: pick a card in the hand first, then confirm here
+                return (
+                    <button
+                        className="btn"
+                        onClick={() => multiSelectedCardIds[0] && onDiscardSingle(multiSelectedCardIds[0])}
+                        disabled={multiSelectedCardIds.length !== 1}
+                    >
+                        {multiSelectedCardIds.length === 1 ? 'Discard selected card' : 'Select a card to discard'}
+                    </button>
+                );
+            }
             if (discardCount > 1 || isVariableCount) {
                 const requiredCount = isVariableCount ? 1 : discardCount;
                 return (

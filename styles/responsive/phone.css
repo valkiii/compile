@@ -455,6 +455,70 @@
         border-radius: 16px 16px 0 0 !important;
     }
 
+    /* Deck / trash viewer: one scrolling page instead of small scroll boxes inside a scroll box */
+    .debug-modal-content {
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+    }
+
+    .debug-modal-content .debug-content-wrapper,
+    .debug-modal-content .debug-grids-area {
+        display: flex;
+        flex-direction: column;
+        max-height: none !important;
+        overflow: visible !important;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    /* Trash (face-up, worth reading) first; the deck is just face-down backs */
+    .debug-modal-content .debug-grids-area > h3:nth-of-type(2),
+    .debug-modal-content .debug-grids-area > .debug-card-grid:nth-of-type(2) {
+        order: -1;
+    }
+
+    .debug-modal-content .debug-grids-area > .debug-card-grid:nth-of-type(1) {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .debug-modal-content .debug-grids-area > .debug-card-grid:nth-of-type(1) .card-component.in-hand {
+        font-size: 0.3rem;
+    }
+
+    .modal-content .modal-close-btn {
+        margin-right: 0;
+        position: relative;
+        z-index: 3;
+    }
+
+    .debug-modal-content .debug-preview-area {
+        display: none;
+    }
+
+    .debug-modal-content .debug-card-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        padding: 6px;
+        max-height: none;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .debug-modal-content .debug-card-grid .card-component.in-hand {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 5 / 7;
+        font-size: 0.42rem;
+    }
+
+    .debug-modal-content .debug-card-grid .no-cards {
+        grid-column: 1 / -1;
+        padding: 1rem;
+    }
+
     /* Game log: the two 180px card-preview columns left no room for the text on a phone */
     .log-modal-content .log-preview-area {
         display: none;

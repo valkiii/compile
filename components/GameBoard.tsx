@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import { ControlInfo } from './ControlInfo';
+import React, { useState } from 'react';
 import { GameState, PlayedCard, Player } from '../types';
 import { CardPosition } from '../types/animation';
 import { Lane } from './Lane';
@@ -431,6 +432,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false
     }
 
 
+    const [showControlInfo, setShowControlInfo] = useState(false);
+
     const getControlCoinClass = () => {
         if (controlCardHolder === 'player') return 'player-controlled';
         if (controlCardHolder === 'opponent') return 'opponent-controlled';
@@ -451,6 +454,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false
 
     return (
         <div className="game-board">
+            {showControlInfo && <ControlInfo gameState={gameState} onClose={() => setShowControlInfo(false)} />}
             <div className="opponent-hand-area">
                 {(() => {
                     // DEFENSIVE: Deduplicate hand cards to prevent React key errors
@@ -527,12 +531,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, compact = false
             <div className="protocol-bars-container">
                 {gameState.useControlMechanic && (
                     <div className="control-coin-container">
-                        <div
+                        <button
+                            type="button"
                             className={`control-coin ${getControlCoinClass()}`}
                             title={getControlCoinTitle()}
+                            aria-label={`${getControlCoinTitle()} Tap for how control works.`}
+                            onClick={() => setShowControlInfo(true)}
                         >
                             C
-                        </div>
+                        </button>
                         <div className={`control-coin-label ${getControlCoinClass()}`}>
                             {getControlCoinLabel()}
                         </div>

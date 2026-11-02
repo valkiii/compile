@@ -4,6 +4,8 @@
  */
 
 // FIX: Import useState and useEffect from React, and fix malformed import.
+import { ControlBanner } from '../components/ControlBanner';
+import { RevealedHand } from '../components/RevealedHand';
 import { needsControlMechanic } from '../logic/customProtocols/main3Rules';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -456,6 +458,28 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
 
   const [hoveredCard, setHoveredCard] = useState<PreviewState>(null);
   const [multiSelectedCardIds, setMultiSelectedCardIds] = useState<string[]>([]);
+
+  // Forced line (Lust-6 "your opponent plays 1 card face-down in this line", Gravity-6 ...): once the
+  // player has picked the card, play it straight into that line instead of asking for a lane tap
+  const forcedPlayLane = gameState.actionRequired?.type === 'select_lane_for_play' && gameState.actionRequired.actor === 'player'
+    ? (gameState.actionRequired as any).preSelectedLane as number | undefined : undefined;
+  const forcedPlayKey = forcedPlayLane !== undefined ? `${(gameState.actionRequired as any).cardInHandId}:${forcedPlayLane}` : '';
+  useEffect(() => {
+    if (forcedPlayLane === undefined || isAnimating) return;
+    resolveActionWithLane(forcedPlayLane);
+  }, [forcedPlayKey, isAnimating]);
+
+  // Opponent's revealed hand cards (Lust-4 "Reveal your hand", ...): show them when new ones appear
+  const [revealedToShow, setRevealedToShow] = useState<PlayedCard[] | null>(null);
+  const seenRevealedRef = useRef(new Set<string>());
+  const revealedOpponentCards = gameState.opponent.hand.filter(c => c.isRevealed);
+  const revealedKey = revealedOpponentCards.map(c => c.id).join(',');
+  useEffect(() => {
+    const fresh = revealedOpponentCards.filter(c => !seenRevealedRef.current.has(c.id));
+    if (fresh.length === 0) return;
+    fresh.forEach(c => seenRevealedRef.current.add(c.id));
+    setRevealedToShow(revealedOpponentCards);
+  }, [revealedKey]);
   const [showLog, setShowLog] = useState(false);
   const [toasts, setToasts] = useState<{ message: string; player: Player; id: string }[]>([]);
   const lastLogLengthRef = useRef(gameState.log.length);
@@ -916,8 +940,9 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
           });
           return;
         } else {
-          // Single discard (count === 1)
-          confirmMove(`Discard ${card.protocol} ${card.value}?`, () => discardCardFromHand(card.id));
+          // Single discard: select first (so the hand can be looked at), then the Discard button confirms
+          setMultiSelectedCardIds(prev => (prev[0] === card.id ? [] : [card.id]));
+          if (isCompact) setHoveredCard({ card, showContents: true });
           return;
         }
       }
@@ -1089,6 +1114,7 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
       onResolveOptionalDiscardCustomPrompt={resolveOptionalDiscardCustomPrompt}
       onResolveOptionalEffectPrompt={resolveOptionalEffectPrompt}
       onResolveVariableDiscard={resolveVariableDiscard}
+      onDiscardSingle={(cardId: string) => { setMultiSelectedCardIds([]); discardCardFromHand(cardId); }}
       onResolveRevealBoardCardPrompt={resolveRevealBoardCardPrompt}
       onResolveControlMechanicPrompt={resolveControlMechanicPrompt}
       onResolveCustomChoice={resolveCustomChoice}
@@ -1314,6 +1340,8 @@ function GameScreenContent({ onBack, onEndGame, playerProtocols, opponentProtoco
                 />
                 
                 <div className="player-action-area">
+                  {revealedToShow && !isAnimating && <RevealedHand cards={revealedToShow} onClose={() => setRevealedToShow(null)} />}
+                  <ControlBanner log={gameState.log} />
                   {pendingMove && <ConfirmMove move={pendingMove} onDone={() => setPendingMove(null)} />}
                   {mode === 'tutorial' && !pendingMove && (
                     <CoachHints gameState={gameState} selectedCardId={selectedCard} isAnimating={isAnimating || showCoinFlip} />

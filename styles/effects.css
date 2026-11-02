@@ -252,3 +252,74 @@
     text-decoration: underline;
     cursor: pointer;
 }
+
+/* "CONTROL ACTION" banner (control used, gained or lost) */
+.control-banner {
+  --banner-color: var(--primary-color);
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  z-index: 950;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  column-gap: 0.75rem;
+  align-items: center;
+  padding: 0.8rem 1.4rem;
+  border: 2px solid var(--banner-color);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--background-color, #0b0820) 82%, var(--banner-color));
+  box-shadow: 0 0 28px color-mix(in srgb, var(--banner-color) 70%, transparent), inset 0 0 18px color-mix(in srgb, var(--banner-color) 35%, transparent);
+  pointer-events: none;
+  animation: control-banner 2.2s cubic-bezier(.2, .9, .2, 1) forwards;
+}
+
+.control-banner-opponent { --banner-color: var(--danger-color, #ff5577); }
+.control-banner-neutral { --banner-color: var(--secondary-color); }
+
+.control-banner-coin {
+  grid-row: 1 / 3;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: var(--background-color, #0b0820);
+  background: var(--banner-color);
+  box-shadow: 0 0 16px var(--banner-color);
+}
+
+.control-banner-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.1rem, 5vw, 1.8rem);
+  letter-spacing: 0.12em;
+  color: var(--banner-color);
+  text-shadow: 0 0 12px var(--banner-color);
+  white-space: nowrap;
+}
+
+.control-banner-detail {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.82rem;
+  color: var(--text-color, #fff);
+  opacity: 0.9;
+  max-width: 70vw;
+  letter-spacing: normal;
+}
+
+@keyframes control-banner {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); letter-spacing: 0.4em; }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  20% { transform: translate(-50%, -50%) scale(1); }
+  82% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(0.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control-banner { animation-duration: 2.2s; animation-timing-function: steps(1); }
+}

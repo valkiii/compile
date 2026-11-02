@@ -7,6 +7,8 @@ import React, { useState } from 'react';
 import { Card as CardData } from '../data/cards';
 import { Player, PlayerState, PlayedCard, Difficulty } from '../types';
 import { CardComponent } from './Card';
+import { CardDetailSheet } from './CardDetailSheet';
+import { useIsCompact } from '../hooks/useIsCompact';
 
 interface DebugModalProps {
   player: Player;
@@ -20,6 +22,11 @@ export function DebugModal({ player, playerState, onClose, difficulty }: DebugMo
     ? 'Player'
     : `Opponent${difficulty ? ` (${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)})` : ''}`;
   const [previewCard, setPreviewCard] = useState<PlayedCard | null>(null);
+  // Phones: the grid cards are small, so a tap opens the readable detail sheet instead of the side preview
+  const isCompact = useIsCompact();
+  // The tap that opened this panel must not also "click" the card that appears under the finger
+  const [openedAt] = useState(() => Date.now());
+  const justOpened = () => Date.now() - openedAt < 450;
 
   const handleCardHover = (card: PlayedCard | null) => {
     setPreviewCard(card);
@@ -48,10 +55,11 @@ export function DebugModal({ player, playerState, onClose, difficulty }: DebugMo
                 key={card.id}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (justOpened()) return;
                   setPreviewCard(card);
                 }}
-                onMouseEnter={() => handleCardHover(card)}
-                onMouseLeave={() => handleCardHover(null)}
+                onMouseEnter={isCompact ? undefined : () => handleCardHover(card)}
+                onMouseLeave={isCompact ? undefined : () => handleCardHover(null)}
                 style={{ cursor: 'pointer' }}
               >
                 <CardComponent
@@ -95,6 +103,11 @@ export function DebugModal({ player, playerState, onClose, difficulty }: DebugMo
           </div>
         </div>
       </div>
+      {isCompact && previewCard && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <CardDetailSheet card={previewCard} showContents={previewCard.isFaceUp} withBackdrop={true} onClose={() => setPreviewCard(null)} />
+        </div>
+      )}
     </div>
   );
 }

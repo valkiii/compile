@@ -214,6 +214,16 @@ export function executeRevealGiveEffect(
         return { newState };
     }
 
+    // "Reveal your hand" (Lust-4): the whole hand at once, no choice to make
+    if (action === 'reveal' && source === 'own_hand' && count === -1) {
+        const hand = state[cardOwner].hand;
+        if (hand.length === 0) return { newState: log(state, cardOwner, 'No cards in hand to reveal.') };
+        const ownerName = cardOwner === 'player' ? 'Player' : 'Opponent';
+        let newState: GameState = { ...state, [cardOwner]: { ...state[cardOwner], hand: hand.map(c => ({ ...c, isRevealed: true })) } };
+        newState = log(newState, cardOwner, `${ownerName} reveals their hand: ${hand.map(c => `${c.protocol}-${c.value}`).join(', ')}.`);
+        return { newState };
+    }
+
     // CRITICAL: Check if player has any cards in hand (for own_hand reveal/give)
     if (state[cardOwner].hand.length === 0) {
         let newState = log(state, cardOwner, `No cards in hand to ${action}. Effect skipped.`);

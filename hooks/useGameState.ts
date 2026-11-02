@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { GameState, Player, Difficulty, PlayedCard, AnimationRequest, GamePhase, ActionRequired, Card } from '../types';
 import * as stateManager from '../logic/game/stateManager';
 import * as phaseManager from '../logic/game/phaseManager';
@@ -1374,7 +1374,9 @@ export const useGameState = (
     // NEW: Process _pendingAnimationRequests for player actions
     // This handles draw animations from optional draws (Death-1), reactive effects, etc.
     // AI actions process this in aiManager.ts, but player actions need it here
-    useEffect(() => {
+    // Layout effect: queue the animation before the browser paints, otherwise a drawn card
+    // flashes in the hand for one frame before its draw animation starts
+    useLayoutEffect(() => {
         const pending = (gameState as any)._pendingAnimationRequests as AnimationRequest[] | undefined;
         if (!pending || pending.length === 0) return;
         if (!enqueueAnimation) return;

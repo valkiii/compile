@@ -1811,3 +1811,89 @@
     color: var(--primary-color);
   }
 }
+
+/* Opponent's revealed hand (Lust-4 ...) */
+.revealed-hand-panel {
+  text-align: center;
+  max-width: 720px;
+}
+
+.revealed-hand-panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.revealed-hand-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.revealed-hand-cards .card-component.in-hand {
+  width: 110px;
+  height: 154px;
+  font-size: 0.55rem;
+}
+
+.revealed-hand-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* Control coin is a button: tap for how control works */
+button.control-coin {
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.control-info-panel {
+  max-width: 560px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.control-info-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-info-panel h3 {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.25rem;
+}
+
+.control-info-panel p {
+  margin: 0.25rem 0;
+}
+
+.control-info-holder {
+  font-weight: 700;
+  font-size: 1.02rem;
+}
+
+.control-info-lines {
+  opacity: 0.85;
+}
+
+.control-info-hint {
+  margin-top: 1rem !important;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  text-align: right;
+}
+
+.control-coin.small {
+  position: static !important;
+  transform: none !important;
+  width: 1.8rem;
+  height: 1.8rem;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

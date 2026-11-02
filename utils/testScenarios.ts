@@ -4911,3 +4911,25 @@ export const scenarioSloth0: TestScenario = {
         return finalizeScenario(newState);
     }
 };
+
+/**
+ * UI check: discard selection (Envy-5), control info + banner (player holds control), revealed opponent cards
+ */
+export const scenarioUiChecks: TestScenario = {
+    name: "UI checks",
+    description: "Envy-5 in hand (discard 1), player has control, two revealed opponent hand cards",
+    setup: (state: GameState) => {
+        let newState = initScenarioBase(state, ['Envy', 'Lust', 'Nova'], ['Apathy', 'Pride', 'Wrath'], 'player', 'action');
+        newState.player.hand = [createCard('Envy', 5, true), createCard('Lust', 2, true), createCard('Nova', 3, true), createCard('Envy', 1, true)];
+        newState.opponent.hand = [{ ...createCard('Pride', 4, true), isRevealed: true }, { ...createCard('Wrath', 2, true), isRevealed: true }, createCard('Apathy', 1, true)];
+        newState = placeCard(newState, 'player', 0, createCard('Envy', 3, true));
+        newState.useControlMechanic = true;
+        newState.controlCardHolder = 'player';
+
+        newState = recalculateAllLaneValues(newState);
+        const finalState = finalizeScenario(newState);
+        // A long trash to check the deck/trash viewer scrolls on a phone (finalizeScenario empties it)
+        finalState.player.discard = ['Envy', 'Lust', 'Nova'].flatMap(p => [0, 2, 3, 4, 5].map(v => { const { id, isFaceUp, ...c } = createCard(p, v, true) as any; return c; }));
+        return finalState;
+    }
+};
